@@ -3,7 +3,7 @@ import zipfile
 from xml.etree import ElementTree as ET
 from pathlib import Path
 
-namespaces: dict[str, str] = {
+ns: dict[str, str] = {
     "presentation": "urn:oasis:names:tc:opendocument:xmlns:presentation:1.0",
     "css3t": "http://www.w3.org/TR/css3-text/",
     "grddl": "http://www.w3.org/2003/g/data-view#",
@@ -41,25 +41,35 @@ namespaces: dict[str, str] = {
     "xforms": "http://www.w3.org/2002/xforms",
 }
 
-for ns in namespaces:
-    ET.register_namespace(ns, namespaces[ns])
+REPEATED = (
+    "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}number-columns-repeated"
+)
+for n in ns:
+    ET.register_namespace(n, ns[n])
 
 
 class Spreadsheet:
     def __init__(self, spreadsheetfile) -> None:
         # rows: list[dict[str, str]] = []
-        with open(spreadsheetfile, "r") as ods:
-            with zipfile.ZipFile(spreadsheetfile).open(
-                "content.xml"
-            ) as content:
-                xtext = str(content.read(), "utf-8")
-                root = ET.fromstring(xtext)
-                print(root)
-                ET.indent(root)
-                print(ET.tostring(root, encoding="unicode"))
-                # Extract all the rows and text elements
-        # self.titles = rows[0]
-        # self.rows = [{k: v for k, v in zip(self.titles, row)} for row in rows]
+        row_list: list[list[str]] = []
+        with zipfile.ZipFile(spreadsheetfile).open("content.xml") as content:
+            xtext = str(content.read(), "utf-8")
+            root = ET.fromstring(xtext)
+            for row in root.findall(".//table:table-row", ns):
+                cells = []
+                for c in row.findall(".//table:table-cell", ns):
+                    txt = "".join(p.text for p in c.findall(".//text:p", ns))
+                    if REPEATED in c.attrib.keys():
+                        cells.extend([txt] * int(c.attrib[REPEATED]))
+                    else:
+                        cells.append(txt)
+                row_list.append(cells)
+        self.titles = row_list[0]
+        self.rows = [
+            {k: v for k, v in zip(self.titles, row) if k}
+            for row in row_list[1:]
+        ]
+        self.titles = [x for x in self.titles if x]
 
 
 if __name__ == "__main__":
@@ -68,3 +78,5 @@ if __name__ == "__main__":
     args = argparser.parse_args()
     print(type(args.file), args.file)
     sheet = Spreadsheet(args.file)
+    print(sheet.titles)
+    print(sheet.rows)
