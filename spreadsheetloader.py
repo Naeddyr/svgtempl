@@ -44,8 +44,6 @@ ns: dict[str, str] = {
 REPEATED = (
     "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}number-columns-repeated"
 )
-for n in ns:
-    ET.register_namespace(n, ns[n])
 
 
 class Spreadsheet:
@@ -78,5 +76,5 @@ if __name__ == "__main__":
     args = argparser.parse_args()
     print(type(args.file), args.file)
     sheet = Spreadsheet(args.file)
-    print(sheet.titles)
-    print(sheet.rows)
+    print("First row (skipping empty cells)", sheet.titles)
+    print("Following rows: ", sheet.rows)
