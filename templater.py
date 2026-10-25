@@ -26,20 +26,40 @@ class InkscapeProcess:
             stdin=subprocess.PIPE,
         )
         self.file = svgfile
-        self._initialize_process()
+        self._get_empty_prompt()
+        self.load(svgfile)
+        print(self.action((("query-all",),)))
 
-    def _initialize_process(self) -> None:
-        ...
+    def _get_empty_prompt(self) -> None:
         # Get rid of the stdout buffer after starting the interactive session,
         # so that we know we're sitting on waiting for input with `> `
         # Maybe check if it's the correct, standard output lines
 
         # Load the file given in self.file
 
-    def send(self, action: str = "") -> None:
-        self.proc.write(action.strip() + "\n")
+        check_lines: list[str] = []
 
-    def action(self, action: str, rest: list[str]) -> list[str]:
+        self.send()
+        while True:
+            line = self.proc.stdout.readline().strip()
+            if line == ">":  # Empty prompt, by just sending a newline
+                break
+            check_lines.append(line)
+
+        if check_lines != STARTUP_CHECK:
+            raise Exception(
+                f"Inkscape version error? Inkscape shell provided "
+                f"unknown lines when starting up: {check_lines=}. "
+                f"If things look ok, update STARTUP_CHECK by hand."
+            )
+        return
+
+    def send(self, action: str = "") -> None:
+        print(f"Sending: {action.strip()}")
+        self.proc.stdin.write(action.strip() + "\n")
+        self.proc.stdin.flush()
+
+    def action(self, actions: Sequence[Sequence[str]]) -> list[str]:
         # 1. Send action to stdout, flush.
         # 2. Immediately send newline + flush to force a blank prompt that we
         # can use to determine that the stuff we did finished and that we're
@@ -57,9 +77,16 @@ class InkscapeProcess:
         # Actions: maybe handle these as a seq of tuples of strings, instead
         # of as a big string. Join with `";"` here.
 
-        filtered_out_lines: list[str] = []
+        out_lines: list[str] = []
 
-        action = action.strip()
+        # action = ";".join((" ".join(s.strip() for s in a),) for a in actions)
+
+        joined = []
+
+        for tup in actions:
+            joined.append(tup[0] + ": " + " ".join(s.strip() for s in tup[1:]))
+
+        action = ";".join(joined).strip()
 
         self.send()  # Just in case
         self.send(action)
@@ -68,31 +95,50 @@ class InkscapeProcess:
         # Skip first "just in case" empty prompts and other empty prompts
         # until we hit our prompt with our action
 
-        for line in self.proc.stdout.readlines():
-            line = line.strip()
+        while True:
+            line = self.proc.stdout.readline().strip()
+            print(f"{line=}")
+            print(f"{line in ('>', '')}")
             if not (line in (">", "")):
+                print(f"{line=}, '> {action}'")
                 if line == f"> {action}":
+                    print("MATCH")
                     break  # All's fine
-            raise Exception(f"Reading stdout we encountered something that "
-                            f"wasn't an empty prompt or our action: '{line}'")
+                raise Exception(
+                    f"Reading stdout we encountered something that "
+                    f"wasn't an empty prompt or our action: '{line}'"
+                )
 
-        for line in self.proc.stdout.readlines():
-            line = line.strip()
-            if line == ">":
+        while True:
+            line = self.proc.stdout.readline().strip()
+            if line == ">":  # Empty prompt, by just sending a newline
                 break
-            filtered_out_lines.append(line)
+            out_lines.append(line)
 
-        return filtered_out_lines
+        return out_lines
 
-    def load(f: Path) -> None:
-        ...
-        # Can you open a file in the interactive thing and it'll replace the old
-        # one? Just reuse processes.
+    def load(self, f: Path) -> None:
+        ret = self.action(
+            (
+                (
+                    act.OPEN,
+                    str(f),
+                ),
+            )
+        )
+        print(ret)
+        return
 
 
 card = None
 
-with open("card.svg", "r") as f:
-    card = etree.fromstring(f.read())
+if __name__ == "__main__":
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument("file", type=Path)
+    args = argparser.parse_args()
+    print(type(args.file), args.file)
+    sheet = InkscapeProcess(args.file)
 
-print(etree.dump(card))
+    # with open("card.svg", "r") as f:
+    #     card = etree.fromstring(f.read())
+    # print(etree.dump(card))
