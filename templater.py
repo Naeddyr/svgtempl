@@ -39,10 +39,11 @@ class InkscapeProcess:
 
         check_lines: list[str] = []
 
-        self.send()
+        self.send()  # make empty prompt line with newline at end
+
         while True:
             line = self.proc.stdout.readline().strip()
-            if line == ">":  # Empty prompt, by just sending a newline
+            if line == ">":  # Empty prompt
                 break
             check_lines.append(line)
 
