@@ -1,5 +1,4 @@
 import argparse
-import xml.etree.ElementTree as etree
 import subprocess
 import actions as act
 
