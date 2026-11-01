@@ -44,28 +44,25 @@ class Spreadsheet:
                     else:
                         cells.append(c)
                 row_list.append(cells)
-        self.titles = (c.data for c in row_list[0])
-        self.rows = [
+        self.titles: tuple[str, ...] = tuple(c.data for c in row_list[0])
+        # We ignore columns where the first cell (header) is empty
+        self.rows: list[dict[str, DataCell]] = [
             {k: v for k, v in zip(self.titles, row) if k}
             for row in row_list[1:]
         ]
-        self.titles = [x for x in self.titles if x]
+        self.titles = tuple(x for x in self.titles if x)
 
 
 class DataCell:
     def __init__(self, odsnode: Node, document: Spreadsheet):
         self.node = odsnode
         self.doc = document
-        self.getAttribute = self.node.getAttribute
-        self.nodeType = self.node.nodeType
-        self.childNodes = self.node.childNodes
-        self.tagName = self.node.tagName
 
     @property
     def text_tree(self) -> TextTupNode:
-        if not self.nodeType == self.node.ELEMENT_NODE:
+        if not self.node.nodeType == self.node.ELEMENT_NODE:
             return ("", [])
-        if self.tagName == "table:table-cell":
+        if self.node.tagName == "table:table-cell":
             ps = self.node.getElementsByTagName("text:p")
             if len(ps) == 0:
                 return ("", [])
@@ -95,7 +92,7 @@ class DataCell:
     def data(self) -> str:
         # get only data, no formatting
         ret: list[str] = []
-        for child in self.childNodes:
+        for child in self.node.childNodes:
             if child.nodeType == child.TEXT_NODE:
                 ret.append(child.data)
                 continue
