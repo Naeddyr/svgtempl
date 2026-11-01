@@ -3,12 +3,15 @@ import zipfile
 from xml.dom import minidom
 from xml.dom import Node
 from pathlib import Path
-from typing import Generator
+from typing import Literal
+
+TextTupNode = tuple[
+    Literal["root", "", "normal", "i", "b", "ib"], list[str, "TextTupNode"]
+]
 
 
 class Spreadsheet:
     def __init__(self, spreadsheetfile) -> None:
-        # rows: list[dict[str, str]] = []
         row_list: list[list[str]] = []
         self.styles: dict[str, list[str]] = {}
         with zipfile.ZipFile(spreadsheetfile).open("content.xml") as content:
@@ -32,49 +35,81 @@ class Spreadsheet:
 
             for row in root.getElementsByTagName("table:table-row"):
                 cells = []
-                for c in row.getElementsByTagName("table:table-cell"):
-                    txt = "".join(self.get_text(c))
-                    if repeats := c.getAttribute(
+                for odsc in row.getElementsByTagName("table:table-cell"):
+                    c = DataCell(odsc, self)
+                    if repeats := odsc.getAttribute(
                         "table:number-columns-repeated"
                     ):
-                        cells.extend([txt] * int(repeats))
+                        cells.extend([c] * int(repeats))
                     else:
-                        cells.append(txt)
+                        cells.append(c)
                 row_list.append(cells)
-        self.titles = row_list[0]
+        self.titles = (c.data for c in row_list[0])
         self.rows = [
             {k: v for k, v in zip(self.titles, row) if k}
             for row in row_list[1:]
         ]
         self.titles = [x for x in self.titles if x]
 
-    def get_text(self, node: Node) -> Generator[str, None, None]:
+
+class DataCell:
+    def __init__(self, odsnode: Node, document: Spreadsheet):
+        self.node = odsnode
+        self.doc = document
+        self.getAttribute = self.node.getAttribute
+        self.nodeType = self.node.nodeType
+        self.childNodes = self.node.childNodes
+        self.tagName = self.node.tagName
+
+    @property
+    def text_tree(self) -> TextTupNode:
+        if not self.nodeType == self.node.ELEMENT_NODE:
+            return ("", [])
+        if self.tagName == "table:table-cell":
+            ps = self.node.getElementsByTagName("text:p")
+            if len(ps) == 0:
+                return ("", [])
+            return self._get_text_tree_helper(ps[0], "root")
+        return ("", [])
+
+    def _get_text_tree_helper(self, node: Node, prefix: str) -> TextTupNode:
         # get text data with formatting.
+        ret: list[str, TextTupNode] = []
         for child in node.childNodes:
             if child.nodeType == child.TEXT_NODE:
-                yield child.data
+                ret.append(child.data)
                 continue
             if sn := child.getAttribute("text:style-name"):
-                style = self.styles[sn]
-                if "bold" in style:
-                    yield "[b]"
+                style = self.doc.styles[sn]
+                pref = ""
                 if "italic" in style:
-                    yield "[i]"
-                yield from self.get_text(child)
+                    pref = "i"
                 if "bold" in style:
-                    yield "[/b]"
-                if "italic" in style:
-                    yield "[/i]"
+                    pref += "b"
+                ret.append(self._get_text_tree_helper(child, pref))
             else:
-                yield from self.get_text(child)
+                ret.append(self._get_text_tree_helper(child, "n"))
+        return (prefix, ret)
 
-    def get_data(self, node: Node) -> Generator[str, None, None]:
+    @property
+    def data(self) -> str:
         # get only data, no formatting
+        ret: list[str] = []
+        for child in self.childNodes:
+            if child.nodeType == child.TEXT_NODE:
+                ret.append(child.data)
+                continue
+            ret.append(self._get_data_helper(child))
+        return "".join(ret)
+
+    def _get_data_helper(self, node) -> str:
+        ret: list[str] = []
         for child in node.childNodes:
             if child.nodeType == child.TEXT_NODE:
-                yield child.data
+                ret.append(child.data)
                 continue
-            yield from self.get_text(child)
+            ret.append(self._get_data_helper(child))
+        return "".join(ret)
 
 
 if __name__ == "__main__":
@@ -83,5 +118,8 @@ if __name__ == "__main__":
     args = argparser.parse_args()
     print(type(args.file), args.file)
     sheet = Spreadsheet(args.file)
-    print("First row (skipping empty cells)", sheet.titles)
+    print(
+        "First row (skipping empty cells)",
+        sheet.titles,
+    )
     print("Following rows: ", sheet.rows)
