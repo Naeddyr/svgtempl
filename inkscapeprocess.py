@@ -11,8 +11,8 @@ STARTUP_CHECK = [
         "to list all actions. Type 'quit' to quit."
     ),
     "Input of the form:",
-    "action1:arg1; action2:arg2; verb1; verb2; ...",
-    "Only verbs that don't require a desktop may be used.",
+    "action1:arg1; action2:arg2; ...",
+    "Only actions that don't require a desktop may be used.",
 ]
 
 
@@ -47,6 +47,11 @@ class InkscapeProcess:
             check_lines.append(line)
 
         if check_lines != STARTUP_CHECK:
+            for lines in zip(STARTUP_CHECK, check_lines):
+                print(lines)
+                l, r = lines
+                if l != r:
+                    print("Above don't match")
             raise Exception(
                 f"Inkscape version error? Inkscape shell provided "
                 f"unknown lines when starting up: {check_lines=}. "
