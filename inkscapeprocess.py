@@ -122,7 +122,7 @@ class InkscapeProcess:
 
         return out_lines
 
-    def load(self, f: Path) -> None:
+    def load(self, f: Path | str) -> None:
         ret = self.action(
             (
                 (
@@ -132,6 +132,18 @@ class InkscapeProcess:
             )
         )
         print(ret)
+        return
+
+    def export_page(self, f: Path | str) -> None:
+        print(
+            self.action(
+                (
+                    (act.EXPORT_AREA_IS_PAGE,),
+                    (act.EXPORT_NAME, str(f)),
+                    (act.EXPORT_DO,),
+                ),
+            )
+        )
         return
 
 
