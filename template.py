@@ -9,6 +9,15 @@ from typing import Callable
 TemplateFunction = Callable[..., "NodeSet"]
 
 
+def register_in(register: dict[str, TemplateFunction]) -> TemplateFunction:
+    print(f"Reached: {register=}")
+
+    def _register_in(func: TemplateFunction):
+        register[func.__name__] = func
+        return func
+    return _register_in
+
+
 class Card:
     def __init__(
         self,
@@ -40,14 +49,6 @@ class NodeSet:
     def test(self) -> "NodeSet":
         print("TEST")
         return NodeSet(set())
-
-def register_in(register: dict[str, TemplateFunction]) -> TemplateFunction:
-    print(f"Reached: {register=}")
-
-    def _register_in(func: TemplateFunction):
-        register[func.__name__] = func
-        return func
-    return _register_in
 
 
 if __name__ == "__main__":
