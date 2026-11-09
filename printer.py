@@ -22,8 +22,6 @@ class CardPrinter:
         card_paths: list[Path] = sorted(
             f for f in imgdir.iterdir() if f.suffix == ".png"
         )
-        print("PRINTER -----------")
-        print(f"{card_paths=}")
 
         # Load page template SVG file as XML
 
@@ -32,8 +30,6 @@ class CardPrinter:
 
         image_frames = list(template_root.getElementsByTagName("image"))
         page_capacity = len(image_frames)
-        print(f"{image_frames=}")
-        print(f"{page_capacity=}")
         page_nodes: list = []
 
         for i in range(0, len(card_paths), page_capacity):

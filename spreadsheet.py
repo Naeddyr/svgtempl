@@ -5,9 +5,8 @@ from xml.dom import Node
 from pathlib import Path
 from typing import Literal
 
-TextTupNode = tuple[
-    Literal["root", "", "normal", "i", "b", "ib"], list[str, "TextTupNode"]
-]
+TEXT_FLAGS = Literal["root", "i", "b"]
+TextTupNode = tuple[list[TEXT_FLAGS], list[str, "TextTupNode"]]
 
 
 class Spreadsheet:
@@ -61,15 +60,17 @@ class DataCell:
     @property
     def text_tree(self) -> TextTupNode:
         if not self.node.nodeType == self.node.ELEMENT_NODE:
-            return ("", [])
+            return ([], [])
         if self.node.tagName == "table:table-cell":
             ps = self.node.getElementsByTagName("text:p")
             if len(ps) == 0:
-                return ("", [])
-            return self._get_text_tree_helper(ps[0], "root")
-        return ("", [])
+                return ([], [])
+            return self._get_text_tree_helper(ps[0], ["root"])
+        return ([], [])
 
-    def _get_text_tree_helper(self, node: Node, prefix: str) -> TextTupNode:
+    def _get_text_tree_helper(
+        self, node: Node, prefix: list[TEXT_FLAGS]
+    ) -> TextTupNode:
         # get text data with formatting.
         ret: list[str, TextTupNode] = []
         for child in node.childNodes:
@@ -78,11 +79,11 @@ class DataCell:
                 continue
             if sn := child.getAttribute("text:style-name"):
                 style = self.doc.styles[sn]
-                pref = ""
+                pref = []
                 if "italic" in style:
-                    pref = "i"
+                    pref.append("i")
                 if "bold" in style:
-                    pref += "b"
+                    pref.append("b")
                 ret.append(self._get_text_tree_helper(child, pref))
             else:
                 ret.append(self._get_text_tree_helper(child, "n"))
@@ -93,14 +94,13 @@ class DataCell:
         # get only data, no formatting
         ret: list[str] = []
         for child in self.node.childNodes:
-            if child.nodeType == child.TEXT_NODE:
-                ret.append(child.data)
-                continue
             ret.append(self._get_data_helper(child))
         return "".join(ret)
 
     def _get_data_helper(self, node) -> str:
         ret: list[str] = []
+        if node.nodeType == node.TEXT_NODE:
+            return node.data
         for child in node.childNodes:
             if child.nodeType == child.TEXT_NODE:
                 ret.append(child.data)
