@@ -9,15 +9,6 @@ from typing import Callable
 TemplateFunction = Callable[..., "NodeSet"]
 
 
-def register_in(register: dict[str, TemplateFunction]) -> TemplateFunction:
-    print(f"Reached: {register=}")
-
-    def _register_in(func: TemplateFunction):
-        register[func.__name__] = func
-        return func
-    return _register_in
-
-
 class Card:
     def __init__(
         self,
@@ -36,16 +27,12 @@ class Card:
 
 
 class NodeSet:
-    template_funcs: dict[str, TemplateFunction] = {}
-
     def __init__(self, nodes: set[Node]):
         self.nodes = nodes
-        self.funcs = NodeSet.template_funcs
 
     # Chain template_func method calls together. Each returns a new
     # NodeSet object, with a set of XML nodes to be affected by
     # the next method call.
-    @register_in(template_funcs)
     def test(self) -> "NodeSet":
         print("TEST")
         return NodeSet(set())
@@ -57,6 +44,4 @@ if __name__ == "__main__":
     # args = argparser.parse_args()
     # print(type(args.file), args.file)
     a = Card(dict(), None, None)
-    print(a.funcs)
-    print(Card.template_funcs)
 
