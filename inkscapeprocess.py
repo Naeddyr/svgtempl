@@ -27,7 +27,12 @@ class InkscapeProcess:
         self.file = svgfile
         self._get_empty_prompt()
         self.load(svgfile)
-        print(self.action((("query-all",),)))
+
+    def __del__(self) -> None:
+        # self.action() will BLOCK on return if it tries to wait for messages,
+        # so it will always return an empty list when quitting
+        self.action(((act.QUIT,),))
+
 
     def _get_empty_prompt(self) -> None:
         # Get rid of the stdout buffer after starting the interactive session,
@@ -48,10 +53,9 @@ class InkscapeProcess:
 
         if check_lines != STARTUP_CHECK:
             for lines in zip(STARTUP_CHECK, check_lines):
-                print(lines)
                 l, r = lines
                 if l != r:
-                    print("Above don't match")
+                    print(f"Lines do not match: {l=}, {r=}")
             raise Exception(
                 f"Inkscape version error? Inkscape shell provided "
                 f"unknown lines when starting up: {check_lines=}. "
@@ -60,7 +64,6 @@ class InkscapeProcess:
         return
 
     def send(self, action: str = "") -> None:
-        print(f"Sending: {action.strip()}")
         self.proc.stdin.write(action.strip() + "\n")
         self.proc.stdin.flush()
 
@@ -89,7 +92,14 @@ class InkscapeProcess:
         joined = []
 
         for tup in actions:
-            joined.append(tup[0] + ": " + " ".join(s.strip() for s in tup[1:]))
+            if len(tup) == 1:
+                # This is needed for certain issues: for example, typing
+                # `quit:` into the interactive shell will stall until you ^C.
+                joined.append(tup[0])
+            else:
+                joined.append(
+                    tup[0] + ": " + " ".join(s.strip() for s in tup[1:])
+                )
 
         action = ";".join(joined).strip()
 
@@ -97,17 +107,16 @@ class InkscapeProcess:
         self.send(action)
         self.send()  # NOT just in case; this is our sentinel
 
+        if "quit" in action:
+            return []
+
         # Skip first "just in case" empty prompts and other empty prompts
         # until we hit our prompt with our action
-
+        # THIS WILL BLOCK ON QUIT
         while True:
             line = self.proc.stdout.readline().strip()
-            print(f"{line=}")
-            print(f"{line in ('>', '')}")
             if not (line in (">", "")):
-                print(f"{line=}, '> {action}'")
                 if line == f"> {action}":
-                    print("MATCH")
                     break  # All's fine
                 raise Exception(
                     f"Reading stdout we encountered something that "
@@ -123,7 +132,7 @@ class InkscapeProcess:
         return out_lines
 
     def load(self, f: Path | str) -> None:
-        ret = self.action(
+        self.action(
             (
                 (
                     act.OPEN,
@@ -131,18 +140,15 @@ class InkscapeProcess:
                 ),
             )
         )
-        print(ret)
         return
 
     def export_page(self, f: Path | str) -> None:
-        print(
-            self.action(
-                (
-                    (act.EXPORT_AREA_IS_PAGE,),
-                    (act.EXPORT_NAME, str(f)),
-                    (act.EXPORT_DO,),
-                ),
-            )
+        self.action(
+            (
+                (act.EXPORT_AREA_IS_PAGE,),
+                (act.EXPORT_NAME, str(f)),
+                (act.EXPORT_DO,),
+            ),
         )
         return
 
