@@ -1,6 +1,7 @@
 import argparse
 
 from inkscapeprocess import InkscapeProcess
+from spreadsheet import TextTupNode
 from xml.dom.minidom import Element
 from pathlib import Path
 from typing import Callable
