@@ -118,7 +118,7 @@ def get_styles(node: Element) -> tuple[str, str, str]:
     bold = None
     italic = None
     bold_italic = None
-    for tspan in node.childNodes:
+    for tspan in node.getElementsByTagName("tspan"):
         if bold and italic and bold_italic:
             break
         if not isinstance(tspan, Element):
