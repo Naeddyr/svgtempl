@@ -1,0 +1,11 @@
+[project]
+name="svtempl"
+version="0.1"
+authors = [
+  {name = "Kristian Järventaus", email = "kristian.jarventaus@gmail.com"},
+]
+readme = "README.md"
+description = "Generate svg images using templates and spreadsheet data."
+              
+[project.scripts]
+svgtempl = "generatecards:main"
