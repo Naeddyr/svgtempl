@@ -24,41 +24,63 @@ class Card:
         row_data: dict[str, str],
         card_template: Document,
         inkproc: InkscapeProcess,
-        node_class: type["NodeSet"],
+        node_type: type["NodeSet"],
+        text_templater: Callable[[re.Match], str] | None = None,
     ) -> None:
         self.data = row_data
-        self.doc = card_template
+        self.doc = deepcopy(card_template)
         self.proc = inkproc
         # Pass the NodeSet class to Card, or if you want to subclass
         # NodeSet to add more template_funcs or similar, then pass the
         # subclass ("UserNodeSet" or something like that) instead.
-        self.node_class = node_class
+        self.node_type = node_type
+        if text_templater is not None:
+            self.bracket_handler = text_templater
+        else:
+            self.bracket_handler = default_bracket_handler
+        self.cur_id = 0
         self.do()
 
-    def do(self) -> None:
-        text_nodes = NodeSet(set(self.doc.getElementsByTagName("text")))
-        text_nodes.set_text("qwerty *qwerty* _qwer_ty _*qwer*_ty qwerty qwerty qwerty")
+    def do(self) -> Document:
+        text_nodes = NodeSet(
+            self, set(self.doc.getElementsByTagName("text"))
+        )
+        text_nodes.set_text(
+            "qwerty *qwerty* _qwer_ty _*qwer*_ty qwerty qwerty qwerty"
+        )
+        return self.doc
+
+    def root(self) -> "NodeSet":
+        root = self.doc.documentElement
+        assert root is not None
+        return NodeSet(self, {root})
+
+    def new_id(self) -> str:
+        id = f"card_templater_id_{self.cur_id}"
+        self.cur_id += 1
+        return id
 
 
 TEMPLATE_BRACKETS_RE = re.compile(r"(?<!\\){([^{]*?)(?<!\\)}")
 
 
-def bracket_handler(m: re.Match) -> str:
+def default_bracket_handler(m: re.Match) -> str:
     contents = m.group(1)
+    # WIP
     return contents
 
 
 class NodeSet:
     def __init__(
         self,
+        card: Card,
         nodes: set[Element] | Element,
-        text_templates: Callable[[re.Match], str] = bracket_handler,
     ):
-        if isinstance(nodes, Element):
+        self.card = card
+        if not isinstance(nodes, set):
             self.nodes = {nodes}
         else:
             self.nodes = nodes
-        self.bracket_handler = bracket_handler
 
     # Chain template_func method calls together. Each returns a new
     # NodeSet object, with a set of XML nodes to be affected by
@@ -69,21 +91,21 @@ class NodeSet:
             for sn in node.getElementsByTagName("*"):
                 if class_tag in sn.getAttribute("class").split():
                     new_set.add(sn)
-        return NodeSet(new_set)
+        return NodeSet(self.card, new_set)
 
     def filter(self, class_tag: str) -> "NodeSet":
         new_set = set()
         for node in self.nodes:
             if class_tag in node.getAttribute("class").split():
                 new_set.add(node)
-        return NodeSet(new_set)
+        return NodeSet(self.card, new_set)
 
     def elements(self, element_tag: str) -> "NodeSet":
         new_set = set()
         for node in self.nodes:
             for sn in node.getElementsByTagName(element_tag):
                 new_set.add(sn)
-        return NodeSet(new_set)
+        return NodeSet(self.card, new_set)
 
     def set_text(self, text: str) -> "NodeSet":
         new_set = set()
@@ -99,7 +121,7 @@ class NodeSet:
                 node.removeChild(rm_n)
 
             # Handle {} templates:
-            text = TEMPLATE_BRACKETS_RE.sub(self.bracket_handler, text)
+            text = TEMPLATE_BRACKETS_RE.sub(self.card.bracket_handler, text)
 
             # Parse text for light markup
             spans: list[tuple[Style, str]] = parse_markup(text)
@@ -111,13 +133,29 @@ class NodeSet:
 
             # Return node because we did stuff to it
             new_set.add(node)
-        return NodeSet(new_set)
+        return NodeSet(self.card, new_set)
+
+
+def nearest_classed(node: Element, target_class: str) -> Element | None:
+    # Get nearest element with class x above this node in the document
+    # (xml closest)
+    cur: Element | None = None
+    root = node.ownerDocument
+    if root is None:
+        return None
+    for n in root.getElementsByTagName("*"):
+        if target_class in n.getAttribute("class").split():
+            cur = n
+        if n == node:
+            break
+    return cur
 
 
 def get_styles(node: Element) -> tuple[str, str, str]:
     bold = None
     italic = None
     bold_italic = None
+    # pick up specific styles already present
     for tspan in node.getElementsByTagName("tspan"):
         if bold and italic and bold_italic:
             break
@@ -134,6 +172,7 @@ def get_styles(node: Element) -> tuple[str, str, str]:
             continue
         if not bold_italic and "italic" in style and "bold" in style:
             bold_italic = style
+    # defaults
     if not bold:
         bold = "font-weight:bold;font-style:normal;"
     if not italic:
@@ -219,7 +258,7 @@ if __name__ == "__main__":
     f = open(args.file)
     template = parse(f)
     f.close()
-    a = Card(dict(), deepcopy(template), None, NodeSet)
+    a = Card(dict(), template, None, NodeSet, None)
 
     print(a.doc.toxml())
     # print(parse_markup(r"nnnn*bbbbb*nn\*nnn_ii\\i\ii_nnn_ii*bibi*_" + "\\"))

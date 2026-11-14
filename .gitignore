@@ -1,3 +1,4 @@
 crap/
 content/
 __pycache__/
+.mypy_cache/
