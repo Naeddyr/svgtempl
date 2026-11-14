@@ -35,7 +35,7 @@ def run(args) -> int:
     if template is None:
         template = Path("template.svg")
     if not template.is_file() and template.suffix == ".svg":
-        print("Template should be .svg file")
+        print("Please provide an SVG file as your card template")
         return 1
 
     data = args.data
