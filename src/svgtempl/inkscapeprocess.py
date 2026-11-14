@@ -1,9 +1,9 @@
 import argparse
 import subprocess
-import actions as act
 
+from .actions import Act
 from pathlib import Path
-from typing import Sequence
+from typing import IO, Sequence
 
 STARTUP_CHECK = [
     (
@@ -25,14 +25,17 @@ class InkscapeProcess:
             stdin=subprocess.PIPE,
         )
         self.file = svgfile
+        self.stdout: IO[str] = self.proc.stdout  # type: ignore[assignment]
+        assert self.stdout is not None
+        self.stdin: IO[str] = self.proc.stdin  # type: ignore[assignment]
+        assert self.stdin is not None
         self._get_empty_prompt()
         self.load(svgfile)
 
     def __del__(self) -> None:
         # self.action() will BLOCK on return if it tries to wait for messages,
         # so it will always return an empty list when quitting
-        self.action(((act.QUIT,),))
-
+        self.action(((Act.QUIT,),))
 
     def _get_empty_prompt(self) -> None:
         # Get rid of the stdout buffer after starting the interactive session,
@@ -46,7 +49,7 @@ class InkscapeProcess:
         self.send()  # make empty prompt line with newline at end
 
         while True:
-            line = self.proc.stdout.readline().strip()
+            line = self.stdout.readline().strip()
             if line == ">":  # Empty prompt
                 break
             check_lines.append(line)
@@ -64,10 +67,10 @@ class InkscapeProcess:
         return
 
     def send(self, action: str = "") -> None:
-        self.proc.stdin.write(action.strip() + "\n")
-        self.proc.stdin.flush()
+        self.stdin.write(action.strip() + "\n")
+        self.stdin.flush()
 
-    def action(self, actions: Sequence[Sequence[str]]) -> list[str]:
+    def action(self, actions: Sequence[Sequence[Act | str]]) -> list[str]:
         # 1. Send action to stdout, flush.
         # 2. Immediately send newline + flush to force a blank prompt that we
         # can use to determine that the stuff we did finished and that we're
@@ -95,10 +98,10 @@ class InkscapeProcess:
             if len(tup) == 1:
                 # This is needed for certain issues: for example, typing
                 # `quit:` into the interactive shell will stall until you ^C.
-                joined.append(tup[0])
+                joined.append(str(tup[0]))
             else:
                 joined.append(
-                    tup[0] + ": " + " ".join(s.strip() for s in tup[1:])
+                    f"{tup[0]}: " + " ".join(str(s).strip() for s in tup[1:])
                 )
 
         action = ";".join(joined).strip()
@@ -114,7 +117,7 @@ class InkscapeProcess:
         # until we hit our prompt with our action
         # THIS WILL BLOCK ON QUIT
         while True:
-            line = self.proc.stdout.readline().strip()
+            line = self.stdout.readline().strip()
             if not (line in (">", "")):
                 if line == f"> {action}":
                     break  # All's fine
@@ -124,7 +127,7 @@ class InkscapeProcess:
                 )
 
         while True:
-            line = self.proc.stdout.readline().strip()
+            line = self.stdout.readline().strip()
             if line == ">":  # Empty prompt, by just sending a newline
                 break
             out_lines.append(line)
@@ -135,7 +138,7 @@ class InkscapeProcess:
         self.action(
             (
                 (
-                    act.OPEN,
+                    Act.OPEN,
                     str(f),
                 ),
             )
@@ -145,9 +148,9 @@ class InkscapeProcess:
     def export_page(self, f: Path | str) -> None:
         self.action(
             (
-                (act.EXPORT_AREA_IS_PAGE,),
-                (act.EXPORT_NAME, str(f)),
-                (act.EXPORT_DO,),
+                (Act.EXPORT_AREA_IS_PAGE,),
+                (Act.EXPORT_NAME, str(f)),
+                (Act.EXPORT_DO,),
             ),
         )
         return

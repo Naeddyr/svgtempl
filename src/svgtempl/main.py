@@ -1,6 +1,6 @@
 import argparse
 
-from inkscapeprocess import InkscapeProcess
+from .inkscapeprocess import InkscapeProcess
 from shutil import which
 
 # from xml.dom.minidom import Document, Element, Text, parse
@@ -16,9 +16,9 @@ def main() -> int:
     argparser = argparse.ArgumentParser()
     subparsers = argparser.add_subparsers()
     run_parser = subparsers.add_parser("run")
-    run_parser.add_argument("--template", "-t", type=Path)
-    run_parser.add_argument("--outdir", "-o", type=Path)
-    run_parser.add_argument("--data", "-d", type=Path)
+    run_parser.add_argument("--template", "-t", type=Path, required=True)
+    run_parser.add_argument("--outdir", "-o", type=Path, required=True)
+    run_parser.add_argument("--data", "-d", type=Path, required=True)
     run_parser.set_defaults(func=run)
     init_parser = subparsers.add_parser("init")
     init_parser.set_defaults(func=init)
@@ -52,7 +52,7 @@ def run(args) -> int:
 
 def init(args) -> int:
     print(args)
-    print("INIT")
+    print("INIT TEST")
     return 0
 
 
