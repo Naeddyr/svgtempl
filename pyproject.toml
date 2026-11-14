@@ -8,4 +8,4 @@ readme = "README.md"
 description = "Generate svg images using templates and spreadsheet data."
               
 [project.scripts]
-svgtempl = "svgtempl.generatecards:main"
+svgtempl = "svgtempl.main:main"
