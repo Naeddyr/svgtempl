@@ -5,63 +5,78 @@
 import argparse
 import tempfile
 
-from inkscapeprocess import InkscapeProcess
-from copy import deepcopy
+from .inkscapeprocess import InkscapeProcess
 from pathlib import Path
 from xml.dom import minidom
+from xml.dom.minidom import Element
 
 
-class CardPrinter:
-    def __init__(
-        self,
-        template_source: Path,
-        imgdir: Path,
-        outdir: Path,
-        inkscape: InkscapeProcess,
-    ) -> None:
-        card_paths: list[Path] = sorted(
-            f for f in imgdir.iterdir() if f.suffix == ".png"
-        )
+def print_cards(
+    template_source: Path,
+    imgdir: Path,
+    outdir: Path,
+    inkscape: InkscapeProcess,
+    amounts: dict[Path, int] | None = None,
+) -> None:
+    card_paths: list[Path] = sorted(
+        f for f in imgdir.iterdir() if f.suffix == ".png"
+    )
 
-        # Load page template SVG file as XML
+    if amounts is not None:
+        new_paths = []
+        for p in card_paths:
+            print(f"{p=}")
+            if p in amounts:
+                new_paths.extend(amounts[p] * [p])
+        card_paths = new_paths
 
+    # Load page template SVG file as XML
+
+    with template_source.open() as f:
+        template_root = minidom.parse(f)
+
+    image_frames = list(template_root.getElementsByTagName("image"))
+    page_capacity = len(image_frames)
+    assert page_capacity > 0, "Check that page template has image elements."
+    page_nodes: list = []
+
+    for i in range(0, len(card_paths), page_capacity):
         with template_source.open() as f:
-            template_root = minidom.parse(f)
+            cur_doc = minidom.parse(f)
+        image_frames = list(
+            f
+            for f in cur_doc.getElementsByTagName("image")
+            if isinstance(f, Element)
+        )
+        card_batch = card_paths[i : i + page_capacity]
+        for i, card_path in enumerate(card_batch):
+            frame = image_frames[i]
+            frame.setAttribute("xlink:href", str(card_path.absolute()))
 
-        image_frames = list(template_root.getElementsByTagName("image"))
-        page_capacity = len(image_frames)
-        page_nodes: list = []
+        if len(card_batch) < page_capacity:
+            for frame in image_frames[len(card_batch) :]:
+                par = frame.parentNode
+                if par is not None:
+                    par.removeChild(frame)
 
-        for i in range(0, len(card_paths), page_capacity):
-            cur_doc = deepcopy(template_root)
-            image_frames = list(cur_doc.getElementsByTagName("image"))
-            card_batch = card_paths[i : i + page_capacity]
-            for i, card_path in enumerate(card_batch):
-                frame = image_frames[i]
-                frame.setAttribute("xlink:href", str(card_path.absolute()))
+        page_nodes.append(cur_doc)
 
-            if len(card_batch) < page_capacity:
-                for frame in image_frames[len(card_batch) :]:
-                    frame.parentNode.removeChild(frame)
+    with tempfile.TemporaryDirectory() as d_string:
+        svg_cache = Path(d_string)
+        padding = len(str(len(page_nodes)))
+        for i, page in enumerate(page_nodes):
+            fnum = str(i + 1).rjust(padding, "0")
+            page_path = svg_cache / f"{fnum}.svg"
+            with page_path.open("w") as f:
+                page.writexml(f)
 
-            page_nodes.append(cur_doc)
-
-        with tempfile.TemporaryDirectory() as d_string:
-            d = Path(d_string)
-            padding = len(str(len(page_nodes)))
-            for i, page in enumerate(page_nodes):
-                fnum = str(i + 1).rjust(padding, "0")
-                page_path = d / f"{fnum}.svg"
-                with page_path.open("w") as f:
-                    page.writexml(f)
-
-            for i, page in enumerate(d.iterdir()):
-                if page.suffix != ".svg":
-                    continue
-                fnum = str(i + 1).rjust(padding, "0")
-                page_path = outdir / f"{fnum}.pdf"
-                inkscape.load(page)
-                inkscape.export_page(page_path)
+        for i, page in enumerate(sorted(svg_cache.iterdir())):
+            if page.suffix != ".svg":
+                continue
+            fnum = str(i + 1).rjust(padding, "0")
+            page_path = outdir / f"{fnum}.pdf"
+            inkscape.load(page)
+            inkscape.export_page(page_path)
 
 
 if __name__ == "__main__":
@@ -87,4 +102,4 @@ if __name__ == "__main__":
         exit(1)
 
     inkproc = InkscapeProcess(template)
-    printer = CardPrinter(template, imgdir, outdir, inkproc)
+    print_cards(template, imgdir, outdir, inkproc)
