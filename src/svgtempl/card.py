@@ -80,7 +80,7 @@ class Card:
         self.root().find_ids(self.tb_removed)._remove()
         return self.doc
 
-
+    @property
     def root(self) -> "NodeSet":
         root = self.doc.documentElement
         assert root is not None
