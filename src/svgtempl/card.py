@@ -69,7 +69,6 @@ class Card:
         self.tb_removed: list[str] = []
 
     def generate(self) -> Document:
-
         # Run user-provided script
         self.user_script(self)
 
@@ -216,13 +215,20 @@ class NodeSet:
             new_set.append(node)
         return NodeSet(self.card, new_set)
 
-    def remove(self) -> None:
+    def remove(self) -> "NodeSet":
         self.card.tb_removed.extend(self.id_list())
+        return self
 
     def _remove(self) -> None:
         for node in self.nodes:
             if par := node.parentNode:
                 par.removeChild(node)
+
+    def set_attrib(self, attribs: dict[str, str]) -> "NodeSet":
+        for node in self.nodes:
+            for k, v in attribs.items():
+                node.setAttribute(k, v)
+        return self
 
 
 def nearest_classed(node: Element, target_class: str) -> Element | None:
