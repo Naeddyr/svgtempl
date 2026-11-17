@@ -3,11 +3,10 @@ import importlib
 import sys
 import tempfile
 
-from .card import Card
-from .inkscapeprocess import InkscapeProcess
-from .printer import print_cards
-from .spreadsheet import Spreadsheet
-# from .temp_generate import temp_user_script
+from svgtempl.card import Card
+from svgtempl.inkscapeprocess import InkscapeProcess
+from svgtempl.printer import print_cards
+from svgtempl.spreadsheet import Spreadsheet
 from pathlib import Path
 from shutil import which
 from xml.dom import minidom

@@ -3,8 +3,8 @@ import re
 
 from copy import copy, deepcopy
 from enum import Flag, auto
-from .inkscapeprocess import InkscapeProcess
-from .spreadsheet import DataCell
+from svgtempl.inkscapeprocess import InkscapeProcess
+from svgtempl.spreadsheet import DataCell
 from xml.dom.minidom import Document, Element, Text, parse
 from pathlib import Path
 from typing import Callable
