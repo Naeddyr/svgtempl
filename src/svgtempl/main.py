@@ -1,20 +1,29 @@
 import argparse
+import importlib
+import sys
+import tempfile
 
+from .card import Card
 from .inkscapeprocess import InkscapeProcess
-from shutil import which
-
-# from xml.dom.minidom import Document, Element, Text, parse
+from .printer import print_cards
+from .spreadsheet import Spreadsheet
+# from .temp_generate import temp_user_script
 from pathlib import Path
-# from typing import Callable
+from shutil import which
+from xml.dom import minidom
 
 
 def main() -> int:
     if which("inkscape") is None:
-        print("It seems this script has no access to an `inkscape` command; "
-              "please install Inkscape.")
+        print(
+            "It seems this script has no access to an `inkscape` command; "
+            "please install Inkscape."
+        )
         return 1
     argparser = argparse.ArgumentParser()
     subparsers = argparser.add_subparsers()
+
+    # svgtempl run
     run_parser = subparsers.add_parser("run")
     run_parser.add_argument("--template", "-t", type=Path)
     run_parser.add_argument("--outdir", "-o", type=Path)
@@ -22,8 +31,18 @@ def main() -> int:
     run_parser.add_argument("--page-template", "-p", type=Path)
     run_parser.add_argument("--script", "-s", type=Path)
     run_parser.set_defaults(func=run)
+
+    # svgtempl init
     init_parser = subparsers.add_parser("init")
     init_parser.set_defaults(func=init)
+    # Generate:
+    #   Card svg template file
+    #   Page svg template file
+    #     A4 or Letter toggle
+    #   Card generator script user file
+    #   Separate NodeSet subclassing file?
+    #   Spreadsheet template
+    #     Toggle ODS or CSV
     args = argparser.parse_args()
     return args.func(args)
 
@@ -34,16 +53,21 @@ def run(args) -> int:
     template = args.template
     if template is None:
         template = Path("template.svg")
-    if not template.is_file() and template.suffix == ".svg":
+    if not (template.is_file() and template.suffix == ".svg"):
         print("Please provide an SVG file as your card template")
         return 1
+    with open(template) as f:
+        card_template = minidom.parse(f)
 
     data = args.data
     if data is None:
-        # TBD: implement .cvs and Excel? Then try to find one of these three
-        # options in the folder
-        data = Path("data.ods")
-    if not data.is_file() and template.suffix == ".ods":
+        for p in ("data.ods", ):  # "data.csv", excel?
+            try_path = Path(p)
+            if try_path.is_file():
+                data = try_path
+                break
+    print(data)
+    if not (data.is_file() and data.suffix in (".ods", )):
         print("Data should be an .ods spreadsheet file")
         return 1
 
@@ -59,26 +83,60 @@ def run(args) -> int:
     page_template = args.page_template
     if page_template is None:
         page_template = Path("page_template.svg")
-    if not page_template.is_file() and page_template.suffix == ".svg":
+        for p in ("page-template.svg", "page_template.svg"):
+            try_path = Path(p)
+            if try_path.is_file():
+                page_template = try_path
+                break
+    if not (page_template.is_file() and page_template.suffix == ".svg"):
         print("Page template for printing should be .svg file")
         return 1
 
     script = args.script
     if script is None:
         script = Path("script.py")
-    if not script.is_file() and script.suffix == ".py":
-        print("Please provide a generation script (generate boilerplate with "
-              "the command `svgtempl init` in a project folder)")
+    if not (script.is_file() and script.suffix == ".py"):
+        print(
+            "Please provide a generation script (generate boilerplate with "
+            "the command `svgtempl init` in a project folder)"
+        )
         return 1
 
+    user_script = import_from_path("user_script", str(script))
+
     inkproc = InkscapeProcess(template)
-    # printer = CardPrinter(template, imgdir, outdir, inkproc)
+    spreadsheet_data = Spreadsheet(data)
+    print(f"{inkproc=}, {spreadsheet_data.rows=}")
+    with tempfile.TemporaryDirectory() as d_string:
+        card_cache = Path(d_string)
+        print(card_cache)
+        cards = []
+        for i, row in enumerate(spreadsheet_data.rows):
+            card = Card(row, card_template, inkproc, user_script.user_script)
+            card.generate()
+            cards.append(card)
+
+        padding = len(str(len(cards)))
+        print_amounts: dict[Path, int] = {}
+        for i, card in enumerate(cards):
+            fnum = str(i + 1).rjust(padding, "0")
+            card_path = card_cache / f"{fnum}.svg"
+            png_path = card_cache / f"{fnum}.png"
+            print_amounts[png_path] = card.copies
+            with card_path.open("w") as f:
+                card.doc.writexml(f)
+            inkproc.load(card_path)
+            inkproc.export_page(png_path)
+
+        print(f"{print_amounts=}")
+        print_cards(page_template, card_cache, outdir, inkproc, print_amounts)
 
     return 0
 
 
 def init(args) -> int:
     print(args)
+
     # Generate new files; script with boilerplate, template svg file,
     # page template svg, data spreadsheet file
     print("INIT TEST")
@@ -87,3 +145,12 @@ def init(args) -> int:
 
 if __name__ == "__main__":
     exit(main())
+
+
+def import_from_path(module_name: str, file_path: str):
+    # taken straight from https://docs.python.org/3/library/importlib.html
+    spec = importlib.util.spec_from_file_location(module_name, file_path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module

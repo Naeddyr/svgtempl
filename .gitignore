@@ -3,3 +3,4 @@ content/
 __pycache__/
 .mypy_cache/
 src/svgtempl.egg-info/
+tmp/

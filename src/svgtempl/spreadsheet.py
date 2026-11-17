@@ -37,6 +37,12 @@ class DataCell:
         self.node = odsnode
         self.doc = document
 
+    def __str__(self) -> str:
+        return self.data
+
+    def __repr__(self) -> str:
+        return f"'{self.data}'"
+
     @property
     def data(self) -> str:
         # get only data, no formatting
