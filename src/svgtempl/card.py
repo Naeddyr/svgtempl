@@ -65,9 +65,19 @@ class Card:
         # New element -> anchor
         self.anchors: dict[str, str] = {}
 
+        # Element ids that are marked to be removed at the end of the process.
+        self.tb_removed: list[str] = []
+
     def generate(self) -> Document:
+
+        # Run user-provided script
         self.user_script(self)
 
+        # Remove marked elements as a cleanup step at the very end
+        # It's less likely that something goes wrong when you have stuff
+        # that is marked for deletion, compared with deleting it when
+        # all sorts of things are flying around. Maybe...
+        self.root().find_ids(self.tb_removed)._remove()
         return self.doc
 
 
@@ -116,8 +126,7 @@ class NodeSet:
     def id_list(self) -> list[str]:
         ret = []
         for node in self.nodes:
-            for id in node.getAttribute("id"):
-                ret.append(id)
+            ret.append(node.getAttribute("id"))
         return ret
 
     def update(self) -> "NodeSet":
@@ -206,6 +215,15 @@ class NodeSet:
             # Return node because we did stuff to it
             new_set.append(node)
         return NodeSet(self.card, new_set)
+
+    def remove(self) -> None:
+        self.card.tb_removed.extend(self.id_list())
+
+    def _remove(self) -> None:
+        for node in self.nodes:
+            par = node.parentNode
+            if par is not None:
+                par.removeChild(node)
 
 
 def nearest_classed(node: Element, target_class: str) -> Element | None:

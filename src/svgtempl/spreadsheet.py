@@ -25,7 +25,8 @@ class Spreadsheet:
         self.titles: tuple[str, ...] = tuple(c.data for c in row_list[0])
         # We ignore columns where the first cell (header) is empty
         self.rows: list[dict[str, DataCell]] = [
-            {k: v for k, v in zip(self.titles, row) if k} for row in row_list[1:]
+            {k: v for k, v in zip(self.titles, row) if k}
+            for row in row_list[1:]
         ]
         self.titles = tuple(x for x in self.titles if x)
 
