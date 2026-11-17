@@ -72,7 +72,7 @@ class Card:
         # Run user-provided script
         self.user_script(self)
 
-        # Remove marked elements as a cleanup step at the very end
+        # Remove marked elements as a cleanup step at the very end.
         # It's less likely that something goes wrong when you have stuff
         # that is marked for deletion, compared with deleting it when
         # all sorts of things are flying around. Maybe...
@@ -372,15 +372,15 @@ def add_tspans(
     return None
 
 
-if __name__ == "__main__":
-    argparser = argparse.ArgumentParser()
-    argparser.add_argument("file", type=Path)
-    args = argparser.parse_args()
-    # print(type(args.file), args.file)
-    f = open(args.file)
-    template = parse(f)
-    f.close()
-    a = Card(dict(), template, None, NodeSet, None)
+# if __name__ == "__main__":
+#     argparser = argparse.ArgumentParser()
+#     argparser.add_argument("file", type=Path)
+#     args = argparser.parse_args()
+#     # print(type(args.file), args.file)
+#     f = open(args.file)
+#     template = parse(f)
+#     f.close()
+#     a = Card(dict(), template, None, NodeSet, None)
 
-    print(a.doc.toxml())
+#     print(a.doc.toxml())
     # print(parse_markup(r"nnnn*bbbbb*nn\*nnn_ii\\i\ii_nnn_ii*bibi*_" + "\\"))

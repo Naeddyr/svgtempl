@@ -29,6 +29,7 @@ def main() -> int:
     run_parser.add_argument("--data", "-d", type=Path)
     run_parser.add_argument("--page-template", "-p", type=Path)
     run_parser.add_argument("--script", "-s", type=Path)
+    run_parser.add_argument("--export-cards", "-c", action="store_true")
     run_parser.set_defaults(func=run)
 
     # svgtempl init
@@ -57,16 +58,18 @@ def run(args) -> int:
         return 1
     with open(template) as f:
         card_template = minidom.parse(f)
+    # WIP: enable the use of several different templates that can be switched
+    # between as needed.
 
     data = args.data
     if data is None:
-        for p in ("data.ods", ):  # "data.csv", excel?
+        for p in ("data.ods",):  # "data.csv", excel?
             try_path = Path(p)
             if try_path.is_file():
                 data = try_path
                 break
     print(data)
-    if not (data.is_file() and data.suffix in (".ods", )):
+    if not (data.is_file() and data.suffix in (".ods",)):
         print("Data should be an .ods spreadsheet file")
         return 1
 
@@ -120,7 +123,10 @@ def run(args) -> int:
         for i, card in enumerate(cards):
             fnum = str(i + 1).rjust(padding, "0")
             card_path = card_cache / f"{fnum}.svg"
-            png_path = card_cache / f"{fnum}.png"
+            if args.export_cards is True:
+                png_path = outdir / f"{fnum}.png"
+            else:
+                png_path = card_cache / f"{fnum}.png"
             print_amounts[png_path] = card.copies
             with card_path.open("w") as f:
                 card.doc.writexml(f)
@@ -128,7 +134,10 @@ def run(args) -> int:
             inkproc.export_page(png_path)
 
         print(f"{print_amounts=}")
-        print_cards(page_template, card_cache, outdir, inkproc, print_amounts)
+        if args.export_cards is not True:
+            print_cards(
+                page_template, card_cache, outdir, inkproc, print_amounts
+            )
 
     return 0
 
