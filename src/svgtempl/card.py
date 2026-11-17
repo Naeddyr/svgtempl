@@ -272,6 +272,31 @@ def get_styles(node: Element) -> tuple[str, str, str]:
     return bold, italic, bold_italic
 
 
+def get_css(node: Element) -> dict[str, str]:
+    css = node.getAttribute("style")
+    ret = {}
+    for pair in css.split(";"):
+        k, v = pair.split(":")[0:2]
+        ret[k.strip()] = v.strip()
+    return ret
+
+
+def set_css(node: Element, css_in: dict[str, str]) -> None:
+    # Replace 'style' with new CSS
+    pairs = []
+    for k, v in css_in.items():
+        pairs.append(f"{k}:{v}")
+    node.setAttribute("style", ";".join(pairs))
+
+
+def update_css(node: Element, css_update: dict[str, str]) -> None:
+    # Update 'style' with changes
+    css = get_css(node)
+    for k, v in css_update.items():
+        css[k] = v
+    set_css(node, css)
+
+
 FORMATTING_CHARS_RE = re.compile(r"(\\.|\\$|\*|_)")
 
 
