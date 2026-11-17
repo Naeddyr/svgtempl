@@ -77,7 +77,7 @@ class Card:
         # It's less likely that something goes wrong when you have stuff
         # that is marked for deletion, compared with deleting it when
         # all sorts of things are flying around. Maybe...
-        self.root().find_ids(self.tb_removed)._remove()
+        self.root.find_ids(self.tb_removed)._remove()
         return self.doc
 
     @property
@@ -221,8 +221,7 @@ class NodeSet:
 
     def _remove(self) -> None:
         for node in self.nodes:
-            par = node.parentNode
-            if par is not None:
+            if par := node.parentNode:
                 par.removeChild(node)
 
 
