@@ -63,6 +63,25 @@ class DataCell:
             ret.append(self._get_data_helper(child))
         return "".join(ret)
 
+    @property
+    def int(self) -> int:
+        s = self.data
+        try:
+            return int(s)
+        except Exception:
+            print(f"Could not parse '{s}' as an int! Defaulting to 1")
+            return 1
+
+    @property
+    def float(self) -> float:
+        try:
+            return float(self.data)
+        except Exception:
+            print(
+                f"Could not parse '{self.data}' as a float! Defaulting to 1.0"
+            )
+            return 1.0
+
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
