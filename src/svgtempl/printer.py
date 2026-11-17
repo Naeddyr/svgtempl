@@ -55,8 +55,7 @@ def print_cards(
 
         if len(card_batch) < page_capacity:
             for frame in image_frames[len(card_batch) :]:
-                par = frame.parentNode
-                if par is not None:
+                if par := frame.parentNode:
                     par.removeChild(frame)
 
         page_nodes.append(cur_doc)
