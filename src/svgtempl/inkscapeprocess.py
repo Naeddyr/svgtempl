@@ -1,7 +1,7 @@
 import argparse
 import subprocess
 
-from .actions import Act
+from svgtempl.actions import Act
 from pathlib import Path
 from typing import IO, Sequence
 

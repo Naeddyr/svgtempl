@@ -5,7 +5,7 @@
 import argparse
 import tempfile
 
-from .inkscapeprocess import InkscapeProcess
+from svgtempl.inkscapeprocess import InkscapeProcess
 from pathlib import Path
 from xml.dom import minidom
 from xml.dom.minidom import Element
