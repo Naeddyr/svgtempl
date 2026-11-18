@@ -11,10 +11,16 @@ class Spreadsheet:
         with zipfile.ZipFile(spreadsheetfile).open("content.xml") as content:
             root = minidom.parse(content)
 
-            for row in root.getElementsByTagName("table:table-row"):
+            for i, row in enumerate(
+                root.getElementsByTagName("table:table-row")
+            ):
                 cells = []
                 for odsc in row.getElementsByTagName("table:table-cell"):
-                    c = DataCell(odsc, self)
+                    c = DataCell(
+                        odsc,
+                        self,
+                        i + 1,  # Spreadsheet rows are not 0-indexed
+                    )
                     if repeats := odsc.getAttribute(
                         "table:number-columns-repeated"
                     ):
@@ -28,15 +34,23 @@ class Spreadsheet:
             {k: v for k, v in zip(self.titles, row) if k}
             for row in row_list[1:]
         ]
+        for drow in self.rows:
+            for k, v in drow.items():
+                v.column = k
         self.titles = tuple(x for x in self.titles if x)
 
 
 class DataCell:
     def __init__(
-        self, odsnode: Element | Text | CharacterData, document: Spreadsheet
+        self,
+        odsnode: Element | Text | CharacterData,
+        document: Spreadsheet,
+        row_number: int,
     ):
         self.node = odsnode
         self.doc = document
+        self.row_number = row_number
+        self.column = ""
 
     def __str__(self) -> str:
         return self.data
@@ -63,24 +77,29 @@ class DataCell:
             ret.append(self._get_data_helper(child))
         return "".join(ret)
 
-    @property
-    def int(self) -> int:
+    def get_int(self, default: int = 0) -> int:
         s = self.data
         try:
             return int(s)
         except Exception:
-            print(f"Could not parse '{s}' as an int! Defaulting to 1")
-            return 1
+            print(
+                f"Could not parse '{s}' in row {self.row_number} column "
+                f"{self.column} as an int! Defaulting to {default}"
+            )
+            return default
 
-    @property
-    def float(self) -> float:
+    def float(self, default: float = 0.0) -> float:
         try:
             return float(self.data)
         except Exception:
             print(
-                f"Could not parse '{self.data}' as a float! Defaulting to 1.0"
+                print(
+                    f"Could not parse '{self.data}' in row "
+                    f"{self.row_number} column "
+                    f"{self.column} as an int! Defaulting to {default}"
+                )
             )
-            return 1.0
+            return default
 
 
 if __name__ == "__main__":
