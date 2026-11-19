@@ -19,6 +19,15 @@ class Style(Flag):
     ITALIC = auto()
 
 
+class Unit(Enum):
+    MM = "mm"
+    CM = "cm"
+    IN = "in"
+    PT = "pt"
+    PC = "pc"
+    PX = "px"
+
+
 ID_RE = re.compile(r"(.*svgtempl_)\d+")
 
 
@@ -72,6 +81,8 @@ class Card:
         # Element ids that are marked to be removed at the end of the process.
         self.tb_removed: list[str] = []
 
+        self.measurement_units: Unit = self.get_measurement_units()
+
     def generate(self) -> Document:
         # Run user-provided script
         self.user_script(self)
@@ -103,6 +114,17 @@ class Card:
 
         self.cur_id += 1
         return id
+
+    def get_measurement_units(self) -> Unit:
+        root = self.doc.documentElement
+        assert root is not None
+        ret = Unit.PX
+        for x in ("width", "height"):
+            s = root.getAttribute(x)
+            if s[-2:] in ('mm', 'cm', 'in', 'pt', 'pc', 'px'):
+                ret = Unit(s[-2:])
+                break
+        return ret
 
 
 TEMPLATE_BRACKETS_RE = re.compile(r"(?<!\\){([^{]*?)(?<!\\)}")
