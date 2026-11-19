@@ -2,6 +2,7 @@ import argparse
 import subprocess
 
 from svgtempl.actions import Act
+from svgtempl.units import CONVERSIONS, Unit
 from pathlib import Path
 from typing import IO, Sequence
 
@@ -29,6 +30,9 @@ class InkscapeProcess:
         assert self.stdout is not None
         self.stdin: IO[str] = self.proc.stdin  # type: ignore[assignment]
         assert self.stdin is not None
+        # Convert data from query- actions (default: px) into SVG document
+        # measurement unit (`mm` usually)
+        self.units = Unit.PX
         self._get_empty_prompt()
         self.load(svgfile)
 
@@ -70,7 +74,10 @@ class InkscapeProcess:
         self.stdin.write(action.strip() + "\n")
         self.stdin.flush()
 
-    def action(self, actions: Sequence[Sequence[Act | str]]) -> list[str]:
+    def action(
+        self,
+        actions: Sequence[Sequence[Act | str]] | Act,
+    ) -> list[str]:
         # 1. Send action to stdout, flush.
         # 2. Immediately send newline + flush to force a blank prompt that we
         # can use to determine that the stuff we did finished and that we're
@@ -91,6 +98,9 @@ class InkscapeProcess:
         out_lines: list[str] = []
 
         # action = ";".join((" ".join(s.strip() for s in a),) for a in actions)
+
+        if isinstance(actions, Act):
+            actions = ((actions,),)
 
         joined = []
 
@@ -133,6 +143,24 @@ class InkscapeProcess:
             out_lines.append(line)
 
         return out_lines
+
+    def query(self) -> dict[str, dict[str, float]]:
+        queries = self.action(Act.QUERY_ALL)
+
+        # unit conversion code WIP
+        conv = CONVERSIONS[self.units]
+
+        ret = {}
+        for line in queries:
+            id, x, y, width, height = line.split(",")
+            ret[id] = {
+                "x": float(x) / conv,
+                "y": float(y) / conv,
+                "width": float(width) / conv,
+                "height": float(height) / conv,
+            }
+
+        return ret
 
     def load(self, f: Path | str) -> None:
         self.action(

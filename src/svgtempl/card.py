@@ -2,11 +2,11 @@ import argparse
 import re
 
 from copy import copy
-from enum import Enum, Flag, auto
+from enum import Flag, auto
 from svgtempl.inkscapeprocess import InkscapeProcess
 from svgtempl.spreadsheet import DataCell
+from svgtempl.units import Unit
 from xml.dom.minidom import Document, Element, Text, parseString
-from pathlib import Path
 from typing import Callable
 
 
@@ -17,15 +17,6 @@ class Style(Flag):
     NONE = 0
     BOLD = auto()
     ITALIC = auto()
-
-
-class Unit(Enum):
-    MM = "mm"
-    CM = "cm"
-    IN = "in"
-    PT = "pt"
-    PC = "pc"
-    PX = "px"
 
 
 ID_RE = re.compile(r"(.*svgtempl_)\d+")
@@ -82,6 +73,7 @@ class Card:
         self.tb_removed: list[str] = []
 
         self.measurement_units: Unit = self.get_measurement_units()
+        self.proc.units = self.measurement_units
 
     def generate(self) -> Document:
         # Run user-provided script
@@ -120,9 +112,9 @@ class Card:
         assert root is not None
         ret = Unit.PX
         for x in ("width", "height"):
-            s = root.getAttribute(x)
-            if s[-2:] in ('mm', 'cm', 'in', 'pt', 'pc', 'px'):
-                ret = Unit(s[-2:])
+            s = root.getAttribute(x)[-2:]
+            if s in ('mm', 'cm', 'in', 'pt', 'pc', 'px', "Q", "yd", "ft",):
+                ret = Unit(s)
                 break
         return ret
 
