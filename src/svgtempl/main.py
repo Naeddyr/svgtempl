@@ -57,7 +57,7 @@ def run(args) -> int:
         print("Please provide an SVG file as your card template")
         return 1
     with open(template) as f:
-        card_template = minidom.parse(f)
+        card_template = f.read()
     # WIP: enable the use of several different templates that can be switched
     # between as needed.
 

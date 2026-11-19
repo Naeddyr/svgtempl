@@ -1,0 +1,7 @@
+https://stackoverflow.com/questions/16359246/how-to-extract-position-rotation-and-scale-from-matrix-svg
+Implement this `transform` `matrix` value decomposer to get rotations.
+
+Text icons: remember tspans exist
+    * load image into inkscape
+    * there is a blank placeholder tspan
+    * query-all will give you the location

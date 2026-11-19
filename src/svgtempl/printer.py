@@ -12,7 +12,7 @@ from xml.dom.minidom import Element
 
 
 def print_cards(
-    template_source: Path,
+    template_string: str,
     imgdir: Path,
     outdir: Path,
     inkscape: InkscapeProcess,
@@ -32,8 +32,7 @@ def print_cards(
 
     # Load page template SVG file as XML
 
-    with template_source.open() as f:
-        template_root = minidom.parse(f)
+    template_root = minidom.parseString(template_string)
 
     image_frames = list(template_root.getElementsByTagName("image"))
     page_capacity = len(image_frames)
@@ -41,8 +40,7 @@ def print_cards(
     page_nodes: list = []
 
     for i in range(0, len(card_paths), page_capacity):
-        with template_source.open() as f:
-            cur_doc = minidom.parse(f)
+        cur_doc = minidom.parseString(template_string)
         image_frames = list(
             f
             for f in cur_doc.getElementsByTagName("image")

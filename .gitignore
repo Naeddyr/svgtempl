@@ -5,3 +5,4 @@ __pycache__/
 src/svgtempl.egg-info/
 tmp/
 src/svgtempl/__pycache__/
+*~

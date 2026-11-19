@@ -1,11 +1,11 @@
 import argparse
 import re
 
-from copy import copy, deepcopy
-from enum import Flag, auto
+from copy import copy
+from enum import Enum, Flag, auto
 from svgtempl.inkscapeprocess import InkscapeProcess
 from svgtempl.spreadsheet import DataCell
-from xml.dom.minidom import Document, Element, Text, parse
+from xml.dom.minidom import Document, Element, Text, parseString
 from pathlib import Path
 from typing import Callable
 
@@ -26,7 +26,7 @@ class Card:
     def __init__(
         self,
         row_data: dict[str, DataCell],
-        card_template: Document,
+        card_template: str,
         inkproc: InkscapeProcess,
         user_script: Callable[["Card"], None],
         node_type: type["NodeSet"] | None = None,
@@ -34,7 +34,11 @@ class Card:
         copies: int = 1,
     ) -> None:
         self.data = row_data
-        self.doc = deepcopy(card_template)
+        # Earlier had trouble with deepcopy in another part of the code;
+        # for some reason it seemed like the deepcopied DOM had some sort sort
+        # of infinite cycle. We'll address this by just getting new copies
+        # by reparsing.
+        self.doc = parseString(card_template)
         self.proc = inkproc
         self.user_script = user_script
         # Pass the NodeSet class to Card, or if you want to subclass
