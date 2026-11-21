@@ -107,9 +107,10 @@ class InkscapeProcess:
         cur_action: list[Act | str] = []
 
         for x in actions:
-            if isinstance(x, Act) and len(cur_action) > 1:
-                cur_actions.append(cur_action)
-                cur_action = []
+            if isinstance(x, Act):
+                if len(cur_action) > 0:
+                    cur_actions.append(cur_action)
+                    cur_action = []
             cur_action.append(x)
         cur_actions.append(cur_action)
 
@@ -119,7 +120,7 @@ class InkscapeProcess:
                 # `quit:`  into the interactive shell will stall until you
                 # ^C.
                 joined.append(str(cur_action[0]))
-            if len(cur_action) > 0:
+            elif len(cur_action) > 0:
                 joined.append(
                     f"{cur_action[0]}: "
                     + " ".join(str(s).strip() for s in cur_action[1:])
