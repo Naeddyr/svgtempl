@@ -163,6 +163,8 @@ class InkscapeProcess:
         return ret
 
     def load(self, f: Path | str) -> None:
+        # Can't annotate the output of NamedTemporaryFile, so just remember
+        # to pass the `.name` property when using them.
         self.action(
             (
                 (

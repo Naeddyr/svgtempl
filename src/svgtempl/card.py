@@ -1,13 +1,14 @@
-import argparse
 import re
+import tempfile
 
+from contextlib import contextmanager
 from copy import copy
 from enum import Flag, auto
 from svgtempl.inkscapeprocess import InkscapeProcess
 from svgtempl.spreadsheet import DataCell
 from svgtempl.units import Unit
-from xml.dom.minidom import Document, Element, Text, parseString
-from typing import Callable
+from xml.dom.minidom import Document, Element, Text, parse, parseString
+from typing import Callable, Generator, Literal
 
 
 TemplateFunction = Callable[..., "NodeSet"]
@@ -77,7 +78,11 @@ class Card:
 
     def generate(self) -> Document:
         # Run user-provided script
-        self.user_script(self)
+        with tempfile.NamedTemporaryFile(mode="w+", suffix=".svg") as f:
+            # self.inkfile is the temporary file used to communicate with
+            # the Inkscape process
+            self.inkfile = f
+            self.user_script(self)
 
         # Remove marked elements as a cleanup step at the very end.
         # It's less likely that something goes wrong when you have stuff
@@ -247,6 +252,57 @@ class NodeSet:
             for k, v in attribs.items():
                 node.setAttribute(k, v)
         return self
+
+    def update_inkscape(self) -> None:
+        self.card.doc.writexml(self.card.inkfile)
+        self.card.proc.load(self.card.inkfile.name)
+
+    def from_inkscape(self) -> None:
+        self.action(
+            (
+                (
+                    Act.EXPORT_NAME,
+                    str(self.card.inkfile),
+                ),
+                (Act.EXPORT_TYPE, "svg"),
+                (Act.EXPORT_DO,),
+            )
+        )
+        self.doc = parse(self.card.inkfile)
+
+    @contextmanager
+    def inkscape(self) -> Generator[InkscapeProcess, None, None]:
+        # Because we don't want there to be two "document trees" that are
+        # modified at the same time, a contextmanager and `with` blocks
+        # should make it easier.
+        self.card.doc.writexml(self.card.inkfile)
+        # should this also unassign self.card.doc?
+        #  * this will prevent the user from modifying the document when
+        #    they shouldn't (we're going to parse the inkscape output)
+        #  * but they also can't read data they need if it's gone.
+        #  * otherwise you'd need to 'lock down' every node in the DOM
+        self.card.proc.load(self.card.inkfile.name)
+
+        try:
+            # yield only once to contexmanager. this is all from example docs
+            # should really use more try blocks but...
+            yield self.card.proc
+
+        # Stuff that should happen when contextmanager releases the yield
+        # by `yielding` again... at least I think that's how it works.
+        finally:
+            self.action(
+                (
+                    (
+                        Act.EXPORT_NAME,
+                        str(self.card.inkfile),
+                    ),
+                    (Act.EXPORT_TYPE, "svg"),
+                    (Act.EXPORT_DO,),
+                )
+            )
+            self.doc = parse(self.card.inkfile)
+
 
 
 def nearest_classed(node: Element, target_class: str) -> Element | None:
