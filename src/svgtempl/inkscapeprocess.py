@@ -4,7 +4,7 @@ import subprocess
 from svgtempl.actions import Act
 from svgtempl.units import CONVERSIONS, Unit
 from pathlib import Path
-from typing import IO, Sequence
+from typing import IO
 
 STARTUP_CHECK = [
     (
@@ -39,7 +39,7 @@ class InkscapeProcess:
     def __del__(self) -> None:
         # self.action() will BLOCK on return if it tries to wait for messages,
         # so it will always return an empty list when quitting
-        self.action(((Act.QUIT,),))
+        self.action(Act.QUIT)
 
     def _get_empty_prompt(self) -> None:
         # Get rid of the stdout buffer after starting the interactive session,
@@ -76,7 +76,7 @@ class InkscapeProcess:
 
     def action(
         self,
-        actions: Sequence[Sequence[Act | str]] | Act,
+        *actions: Act | str,
     ) -> list[str]:
         # 1. Send action to stdout, flush.
         # 2. Immediately send newline + flush to force a blank prompt that we
@@ -99,19 +99,30 @@ class InkscapeProcess:
 
         # action = ";".join((" ".join(s.strip() for s in a),) for a in actions)
 
-        if isinstance(actions, Act):
-            actions = ((actions,),)
+        assert len(actions) > 0
+        assert isinstance(actions[0], Act)
 
         joined = []
+        cur_actions = []
+        cur_action: list[Act | str] = []
 
-        for tup in actions:
-            if len(tup) == 1:
+        for x in actions:
+            if isinstance(x, Act) and len(cur_action) > 1:
+                cur_actions.append(cur_action)
+                cur_action = []
+            cur_action.append(x)
+        cur_actions.append(cur_action)
+
+        for cur_action in cur_actions:
+            if len(cur_action) == 1:
                 # This is needed for certain issues: for example, typing
-                # `quit:` into the interactive shell will stall until you ^C.
-                joined.append(str(tup[0]))
-            else:
+                # `quit:`  into the interactive shell will stall until you
+                # ^C.
+                joined.append(str(cur_action[0]))
+            if len(cur_action) > 0:
                 joined.append(
-                    f"{tup[0]}: " + " ".join(str(s).strip() for s in tup[1:])
+                    f"{cur_action[0]}: "
+                    + " ".join(str(s).strip() for s in cur_action[1:])
                 )
 
         action = ";".join(joined).strip()
@@ -166,22 +177,17 @@ class InkscapeProcess:
         # Can't annotate the output of NamedTemporaryFile, so just remember
         # to pass the `.name` property when using them.
         self.action(
-            (
-                (
-                    Act.OPEN,
-                    str(f),
-                ),
-            )
+            Act.OPEN,
+            str(f),
         )
         return
 
     def export_page(self, f: Path | str) -> None:
         self.action(
-            (
-                (Act.EXPORT_AREA_IS_PAGE,),
-                (Act.EXPORT_NAME, str(f)),
-                (Act.EXPORT_DO,),
-            ),
+            Act.EXPORT_AREA_IS_PAGE,
+            Act.EXPORT_NAME,
+            str(f),
+            Act.EXPORT_DO,
         )
         return
 

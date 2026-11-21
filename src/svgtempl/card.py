@@ -150,9 +150,6 @@ class NodeSet:
         else:
             self.nodes = nodes
 
-        # just a quick alias
-        self.action = self.card.proc.action
-
     def id_list(self) -> list[str]:
         ret = []
         for node in self.nodes:
@@ -261,23 +258,6 @@ class NodeSet:
                 node.setAttribute(k, v)
         return self
 
-    def update_inkscape(self) -> None:
-        self.card.doc.writexml(self.card.inkfile)
-        self.card.proc.load(self.card.inkfile.name)
-
-    def from_inkscape(self) -> None:
-        self.action(
-            (
-                (
-                    Act.EXPORT_NAME,
-                    str(self.card.inkfile),
-                ),
-                (Act.EXPORT_TYPE, "svg"),
-                (Act.EXPORT_DO,),
-            )
-        )
-        self.doc = parse(self.card.inkfile)
-
     @contextmanager
     def inkscape(
         self, read_only=False
@@ -315,15 +295,12 @@ class NodeSet:
         # by `yielding` again... at least I think that's how it works.
         finally:
             if read_only is not True:
-                self.action(
-                    (
-                        (
-                            Act.EXPORT_NAME,
-                            str(self.card.inkfile),
-                        ),
-                        (Act.EXPORT_TYPE, "svg"),
-                        (Act.EXPORT_DO,),
-                    )
+                self.card.proc.action(
+                    Act.EXPORT_NAME,
+                    self.card.inkfile.name,
+                    # Shouldn't need this when we name the tempfile
+                    # (Act.EXPORT_TYPE, "svg"),
+                    Act.EXPORT_DO,
                 )
                 self.doc = parse(self.card.inkfile)
 
@@ -334,24 +311,20 @@ class NodeSet:
     ) -> "NodeSet":
         ids = self.id_list()
 
-        self.update_inkscape()  # XXX this could be a `with` context thing....
-
-        # make a selection of all the id'd objects
-        self.card.proc.action(((Act.SELECT, *ids),))
-        # perform the transform actions (so we don't need to do it manually)
-        if action == Act.ROTATE:
-            assert isinstance(args, float)
-            self.action(((action, str(args)),))
-        elif action == Act.SCALE:
-            assert isinstance(args, float)
-            self.action(((action, str(args)),))
-        elif action == Act.TRANSLATE:
-            assert isinstance(args, tuple)
-            assert len(args) == 2
-            self.action(((action, str(args[0]), str(args[1])),))
-
-        # finish handling stuff in inkscape and update self.doc
-        self.from_inkscape()
+        with self.inkscape() as (inkscape, old_doc):
+            # make a selection of all the id'd objects
+            inkscape.action(Act.SELECT, *ids)
+            # perform the transform actions, so we don't need to do it manually
+            if action == Act.ROTATE:
+                assert isinstance(args, float)
+                inkscape.action(action, str(args))
+            elif action == Act.SCALE:
+                assert isinstance(args, float)
+                inkscape.action(action, str(args))
+            elif action == Act.TRANSLATE:
+                assert isinstance(args, tuple)
+                assert len(args) == 2
+                inkscape.action(action, str(args[0]), str(args[1]))
 
         return self.card.root.find_ids(ids)
 
