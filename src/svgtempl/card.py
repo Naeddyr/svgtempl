@@ -128,6 +128,52 @@ class Card:
                 break
         return ret
 
+    @contextmanager
+    def inkscape(
+        self, read_only=False
+    ) -> Generator[tuple[InkscapeProcess, Document], None, None]:
+        # Because we don't want there to be two "document trees" that are
+        # modified at the same time, a contextmanager and `with` blocks
+        # should make it easier.
+        # `read_only` should be set True when you want to only query
+        # something from Inkscape, especially when you want to make changes
+        # and then check the results.
+
+        self.doc.writexml(self.inkfile)
+
+        old_doc = self.doc
+
+        if read_only is not True:
+            # We break self.card.doc on purpose so that users will not modify
+            # a document that will be replaced by the export from Inkscape
+            # when closing the context
+            # HOWEVER, if there is a need to read the old data while inside
+            # inkscape context, we can provide the old reference as an explicit
+            # "deprecated" tree
+            # This should break typecheckers, too. This is a program to do
+            # some svg image templating, we can just panic.
+            self.doc = None
+
+        self.proc.load(self.inkfile.name)
+
+        try:
+            # yield only once to contexmanager. this is all from example docs
+            # should really use more try blocks but...
+            yield self.proc, old_doc
+
+        # Stuff that should happen when contextmanager releases the yield
+        # by `yielding` again... at least I think that's how it works.
+        finally:
+            if read_only is not True:
+                self.proc.action(
+                    Act.EXPORT_NAME,
+                    self.inkfile.name,
+                    # Shouldn't need this when we name the tempfile
+                    # (Act.EXPORT_TYPE, "svg"),
+                    Act.EXPORT_DO,
+                )
+                self.doc = parse(self.inkfile)
+
 
 TEMPLATE_BRACKETS_RE = re.compile(r"(?<!\\){([^{]*?)(?<!\\)}")
 
@@ -257,52 +303,6 @@ class NodeSet:
             for k, v in attribs.items():
                 node.setAttribute(k, v)
         return self
-
-    @contextmanager
-    def inkscape(
-        self, read_only=False
-    ) -> Generator[tuple[InkscapeProcess, Document], None, None]:
-        # Because we don't want there to be two "document trees" that are
-        # modified at the same time, a contextmanager and `with` blocks
-        # should make it easier.
-        # `read_only` should be set True when you want to only query
-        # something from Inkscape, especially when you want to make changes
-        # and then check the results.
-
-        self.card.doc.writexml(self.card.inkfile)
-
-        old_doc = self.card.doc
-
-        if read_only is not True:
-            # We break self.card.doc on purpose so that users will not modify
-            # a document that will be replaced by the export from Inkscape
-            # when closing the context
-            # HOWEVER, if there is a need to read the old data while inside
-            # inkscape context, we can provide the old reference as an explicit
-            # "deprecated" tree
-            # This should break typecheckers, too. This is a program to do
-            # some svg image templating, we can just panic.
-            self.card.doc = None
-
-        self.card.proc.load(self.card.inkfile.name)
-
-        try:
-            # yield only once to contexmanager. this is all from example docs
-            # should really use more try blocks but...
-            yield self.card.proc, old_doc
-
-        # Stuff that should happen when contextmanager releases the yield
-        # by `yielding` again... at least I think that's how it works.
-        finally:
-            if read_only is not True:
-                self.card.proc.action(
-                    Act.EXPORT_NAME,
-                    self.card.inkfile.name,
-                    # Shouldn't need this when we name the tempfile
-                    # (Act.EXPORT_TYPE, "svg"),
-                    Act.EXPORT_DO,
-                )
-                self.doc = parse(self.card.inkfile)
 
     def _simple_transform(
         self,

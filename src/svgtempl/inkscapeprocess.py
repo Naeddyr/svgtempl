@@ -177,6 +177,12 @@ class InkscapeProcess:
     def load(self, f: Path | str) -> None:
         # Can't annotate the output of NamedTemporaryFile, so just remember
         # to pass the `.name` property when using them.
+        assert isinstance(f, (Path, str)), (
+            f"Argument {f=} is not a Path or "
+            f"string, did you pass a file "
+            f"by mistake?"
+        )
+
         self.action(
             Act.OPEN,
             str(f),
