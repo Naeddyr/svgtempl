@@ -1,11 +1,14 @@
+import math
 import re
 import tempfile
 
 from contextlib import contextmanager
 from copy import copy
 from enum import Flag, auto
+from svgtempl.actions import Act
 from svgtempl.inkscapeprocess import InkscapeProcess
 from svgtempl.spreadsheet import DataCell
+from svgtempl.types import Point, Matrix, Transform
 from svgtempl.units import Unit
 from xml.dom.minidom import Document, Element, Text, parse, parseString
 from typing import Callable, Generator, Literal
@@ -118,7 +121,9 @@ class Card:
         ret = Unit.PX
         for x in ("width", "height"):
             s = root.getAttribute(x)[-2:]
-            if s in ('mm', 'cm', 'in', 'pt', 'pc', 'px', "Q", "yd", "ft",):
+            # Python 3.10 hack to check if a value is found in an enum
+            # Python 3.12 has this as just `s in Unit`.
+            if s in Unit._value2member_map_:
                 ret = Unit(s)
                 break
         return ret
@@ -144,6 +149,9 @@ class NodeSet:
             self.nodes = [nodes]
         else:
             self.nodes = nodes
+
+        # just a quick alias
+        self.action = self.card.proc.action
 
     def id_list(self) -> list[str]:
         ret = []
@@ -303,6 +311,33 @@ class NodeSet:
             )
             self.doc = parse(self.card.inkfile)
 
+    def _simple_transform(
+        self,
+        action: Literal[Act.ROTATE, Act.TRANSLATE, Act.SCALE],
+        args: float | tuple[float, float],
+    ) -> "NodeSet":
+        ids = self.id_list()
+
+        self.update_inkscape()  # XXX this could be a `with` context thing....
+
+        # make a selection of all the id'd objects
+        self.card.proc.action(((Act.SELECT, *ids),))
+        # perform the transform actions (so we don't need to do it manually)
+        if action == Act.ROTATE:
+            assert isinstance(args, float)
+            self.action(((action, str(args)),))
+        elif action == Act.SCALE:
+            assert isinstance(args, float)
+            self.action(((action, str(args)),))
+        elif action == Act.TRANSLATE:
+            assert isinstance(args, tuple)
+            assert len(args) == 2
+            self.action(((action, str(args[0]), str(args[1])),))
+
+        # finish handling stuff in inkscape and update self.doc
+        self.from_inkscape()
+
+        return self.card.root.find_ids(ids)
 
 
 def nearest_classed(node: Element, target_class: str) -> Element | None:
@@ -446,15 +481,55 @@ def add_tspans(
     return None
 
 
-# if __name__ == "__main__":
-#     argparser = argparse.ArgumentParser()
-#     argparser.add_argument("file", type=Path)
-#     args = argparser.parse_args()
-#     # print(type(args.file), args.file)
-#     f = open(args.file)
-#     template = parse(f)
-#     f.close()
-#     a = Card(dict(), template, None, NodeSet, None)
+TRANSFORM_CALLS_RE = re.compile(r"(\w+)\(([^)]*)\)")
 
-#     print(a.doc.toxml())
-    # print(parse_markup(r"nnnn*bbbbb*nn\*nnn_ii\\i\ii_nnn_ii*bibi*_" + "\\"))
+
+def get_transforms(node: Element) -> Transform:
+    #     // calculate delta transform point
+    #     var px = deltaTransformPoint(matrix, { x: 0, y: 1 });
+    #     var py = deltaTransformPoint(matrix, { x: 1, y: 0 });
+    tr_field = node.getAttribute("transform").strip()
+
+    if not tr_field:
+        return Transform(0, 0, 0, 0, 0, 0, 0)
+
+    for m in TRANSFORM_CALLS_RE.findall(tr_field):
+        call = m.group(1).strip().lowercase()
+        params = m.group(2).strip()
+        if call == "matrix":
+            vals = re.split(r"\s*,\s*|\s*", params)
+            matrix_res = Matrix(*(float(s) for s in vals))
+        elif call == "":
+            ...
+        ...
+
+    return Transform(*(map(sum, zip(matrix_res, ...))))
+
+
+def deltatransform_point(m: Matrix, p: Point) -> Point:
+    dx = p.x * m.a + p.y * m.c
+    dy = p.x * m.b + p.y * m.d
+    return Point(dx, dy)
+
+
+def decompose_matrix(m: Matrix) -> Transform:
+    px = deltatransform_point(..., Point(0, 1))
+    py = deltatransform_point(..., Point(1, 0))
+
+    skewx = (180 / math.pi) * math.atan2(px.y, px.x) - 90
+    #     // calculate skew
+    #     var skewX = ((180 / Math.PI) * Math.atan2(px.y, px.x) - 90);
+    #     var skewY = ((180 / Math.PI) * Math.atan2(py.y, py.x));
+
+    #     return {
+
+    #         translateX: matrix.e,
+    #         translateY: matrix.f,
+    #         scaleX: Math.sqrt(matrix.a * matrix.a + matrix.b * matrix.b),
+    #         scaleY: Math.sqrt(matrix.c * matrix.c + matrix.d * matrix.d),
+    #         skewX: skewX,
+    #         skewY: skewY,
+    #         rotation: skewX // rotation is the same as skew x
+    #     };
+    # }
+    return Transform(0, 0, 0, 0, 0, 0, 0)

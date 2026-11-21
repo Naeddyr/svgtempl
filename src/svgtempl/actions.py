@@ -30,13 +30,21 @@ class Act(StrEnum):
     # query-x 	Query 'x' value(s) of selected objects
     # query-y 	Query 'y' value(s) of selected objects
 
-
-
     # EXPORT
     EXPORT_NAME = "export-filename"
+    EXPORT_TYPE = "export-type"
     EXPORT_AREA_IS_PAGE = "export-area-page"
     EXPORT_DO = "export-do"
 
+    # Transform stuff
+    # Probably will only need rotate most of the time
+    ROTATE = "transform-rotate"
+    SCALE = "transform-scale"
+    TRANSLATE = "transform-translate"
+
+
+# transform-scale 	Scale selected objects by scale factor
+# transform-translate 	Translate selected objects (dx,dy)
 # clone 	Create a clone (a copy linked to the original) of selected object
 # clone-link 	Relink the selected clones to the object currently on the clipboard
 # clone-link-lpe 	Creates a new path, applies the Clone original LPE, and refers it to the selected path
