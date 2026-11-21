@@ -279,22 +279,31 @@ class NodeSet:
         self.doc = parse(self.card.inkfile)
 
     @contextmanager
-    def inkscape(self) -> Generator[InkscapeProcess, None, None]:
+    def inkscape(
+        self,
+    ) -> Generator[tuple[InkscapeProcess, Document], None, None]:
         # Because we don't want there to be two "document trees" that are
         # modified at the same time, a contextmanager and `with` blocks
         # should make it easier.
         self.card.doc.writexml(self.card.inkfile)
-        # should this also unassign self.card.doc?
-        #  * this will prevent the user from modifying the document when
-        #    they shouldn't (we're going to parse the inkscape output)
-        #  * but they also can't read data they need if it's gone.
-        #  * otherwise you'd need to 'lock down' every node in the DOM
+
+        # We break self.card.doc on purpose so that users will not modify
+        # a document that will be replaced by the export from Inkscape
+        # when closing the context
+        # HOWEVER, if there is a need to read the old data while inside
+        # inkscape context, we can provide the old reference as an explicit
+        # "deprecated" tree
+        old_doc = self.card.doc
+        # This should break typecheckers, too. This is a program to do
+        # some svg image templating, we can just panic.
+        self.card.doc = None
+
         self.card.proc.load(self.card.inkfile.name)
 
         try:
             # yield only once to contexmanager. this is all from example docs
             # should really use more try blocks but...
-            yield self.card.proc
+            yield self.card.proc, old_doc
 
         # Stuff that should happen when contextmanager releases the yield
         # by `yielding` again... at least I think that's how it works.
