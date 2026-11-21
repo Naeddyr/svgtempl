@@ -11,8 +11,10 @@ from svgtempl.spreadsheet import DataCell
 from svgtempl.types import Point, Matrix, Transform
 from svgtempl.units import Unit
 from xml.dom.minidom import Document, Element, Text, parse, parseString
-from typing import Callable, Generator, Literal
+from typing import Callable, Generator, Literal, ParamSpec, TypeVar
 
+T = TypeVar("T")
+P = ParamSpec("P")
 
 TemplateFunction = Callable[..., "NodeSet"]
 
@@ -79,6 +81,10 @@ class Card:
         self.measurement_units: Unit = self.get_measurement_units()
         self.proc.units = self.measurement_units
 
+        # the lock used to break certain NodeSet methods from running when
+        # inside an Inkscape context
+        self._lock = False
+
     def generate(self) -> Document:
         # Run user-provided script
         with tempfile.NamedTemporaryFile(mode="w+", suffix=".svg") as f:
@@ -131,7 +137,7 @@ class Card:
     @contextmanager
     def inkscape(
         self, read_only=False
-    ) -> Generator[tuple[InkscapeProcess, Document], None, None]:
+    ) -> Generator[InkscapeProcess, None, None]:
         # Because we don't want there to be two "document trees" that are
         # modified at the same time, a contextmanager and `with` blocks
         # should make it easier.
@@ -140,8 +146,6 @@ class Card:
         # and then check the results.
 
         self.doc.writexml(self.inkfile)
-
-        old_doc = self.doc
 
         if read_only is not True:
             # We break self.card.doc on purpose so that users will not modify
@@ -152,27 +156,22 @@ class Card:
             # "deprecated" tree
             # This should break typecheckers, too. This is a program to do
             # some svg image templating, we can just panic.
-            self.doc = None
+            self._lock = True
 
         self.proc.load(self.inkfile.name)
 
         try:
             # yield only once to contexmanager. this is all from example docs
             # should really use more try blocks but...
-            yield self.proc, old_doc
+            yield self.proc
 
         # Stuff that should happen when contextmanager releases the yield
         # by `yielding` again... at least I think that's how it works.
         finally:
             if read_only is not True:
-                self.proc.action(
-                    Act.EXPORT_NAME,
-                    self.inkfile.name,
-                    # Shouldn't need this when we name the tempfile
-                    # (Act.EXPORT_TYPE, "svg"),
-                    Act.EXPORT_DO,
-                )
+                self.proc.export_page(self.inkfile.name)
                 self.doc = parse(self.inkfile)
+                self._lock = False
 
 
 TEMPLATE_BRACKETS_RE = re.compile(r"(?<!\\){([^{]*?)(?<!\\)}")
@@ -182,6 +181,22 @@ def default_bracket_handler(m: re.Match) -> str:
     contents = m.group(1)
     # WIP
     return contents
+
+
+def inkscape_lock(f: Callable[P, T]) -> Callable[P, T]:
+    """Prevent users and other code from manipulating NodeSets when
+    Inkscape is doing changes at the same time."""
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        # This seems really hard or impossible to annotate sensibly
+        # args[0] should always be "self"
+        if args[0].card._lock is True:  # type: ignore
+            raise Exception(
+                "Inkscape context: do not run this method, because its "
+                "result will be overridden when Inkscape finishes."
+            )
+        return f(*args, **kwargs)
+
+    return wrapper
 
 
 class NodeSet:
@@ -202,6 +217,7 @@ class NodeSet:
             ret.append(node.getAttribute("id"))
         return ret
 
+    @inkscape_lock
     def update(self) -> "NodeSet":
         ids = self.id_list()
         root = self.card.doc.documentElement
@@ -261,6 +277,7 @@ class NodeSet:
                 new_set.append(node)
         return NodeSet(self.card, new_set)
 
+    @inkscape_lock
     def set_text(self, text: str) -> "NodeSet":
         new_set = []
         # get styles
@@ -289,6 +306,7 @@ class NodeSet:
             new_set.append(node)
         return NodeSet(self.card, new_set)
 
+    @inkscape_lock
     def remove(self) -> "NodeSet":
         self.card.tb_removed.extend(self.id_list())
         return self
@@ -298,6 +316,7 @@ class NodeSet:
             if par := node.parentNode:
                 par.removeChild(node)
 
+    @inkscape_lock
     def set_attrib(self, attribs: dict[str, str]) -> "NodeSet":
         for node in self.nodes:
             for k, v in attribs.items():
@@ -311,7 +330,7 @@ class NodeSet:
     ) -> "NodeSet":
         ids = self.id_list()
 
-        with self.inkscape() as (inkscape, old_doc):
+        with self.card.inkscape() as inkscape:
             # make a selection of all the id'd objects
             inkscape.action(Act.SELECT, *ids)
             # perform the transform actions, so we don't need to do it manually
