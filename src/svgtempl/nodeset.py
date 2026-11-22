@@ -37,7 +37,7 @@ def inkscape_lock(f: Callable[P, T]) -> Callable[P, T]:
 class NodeSet:
     def __init__(
         self,
-        card: Card,
+        card: "Card",
         nodes: list[Element] | Element,
     ):
         self.card = card

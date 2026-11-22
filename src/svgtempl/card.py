@@ -3,15 +3,13 @@ import tempfile
 
 from contextlib import contextmanager
 from svgtempl.inkscapeprocess import InkscapeProcess
+from svgtempl.nodeset import NodeSet
 from svgtempl.spreadsheet import DataCell
 from svgtempl.units import Unit
 from xml.dom.minidom import Document, parse, parseString
 from typing import Callable, Generator, TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from svgtempl.nodeset import NodeSet
-
-TemplateFunction = Callable[..., NodeSet]
+TemplateFunction = Callable[..., "NodeSet"]
 
 
 ID_RE = re.compile(r"(.*svgtempl_)\d+")
@@ -30,7 +28,7 @@ class Card:
         card_template: str,
         inkproc: InkscapeProcess,
         user_script: Callable[["Card"], None],
-        node_type: type[NodeSet] | None = None,
+        node_type: type["NodeSet"] | None = None,
         text_templater: Callable[[re.Match], str] | None = None,
         copies: int = 1,
     ) -> None:
@@ -155,15 +153,13 @@ class Card:
 
         self.proc.load(self.inkfile.name)
 
-        try:
-            # yield only once to contexmanager. this is all from example docs
-            # should really use more try blocks but...
-            yield self.proc
+        # yield only once to contexmanager. this is all from example docs
+        # should really use more try blocks but...
+        yield self.proc
 
         # Stuff that should happen when contextmanager releases the yield
         # by `yielding` again... at least I think that's how it works.
-        finally:
-            if read_only is not True:
-                self.proc.export_page(self.inkfile.name)
-                self.doc = parse(self.inkfile)
-                self._lock = False
+        if read_only is not True:
+            self.proc.export_page(self.inkfile.name)
+            self.doc = parse(self.inkfile)
+            self._lock = False
