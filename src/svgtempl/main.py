@@ -9,7 +9,6 @@ from svgtempl.printer import print_cards
 from svgtempl.spreadsheet import Spreadsheet
 from pathlib import Path
 from shutil import which
-from xml.dom import minidom
 
 
 def main() -> int:

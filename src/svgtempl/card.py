@@ -7,7 +7,7 @@ from svgtempl.selection import Selection
 from svgtempl.spreadsheet import DataCell
 from svgtempl.units import Unit
 from xml.dom.minidom import Document, parse, parseString
-from typing import Callable, Generator, TYPE_CHECKING
+from typing import Callable, Generator
 
 TemplateFunction = Callable[..., "Selection"]
 
@@ -38,7 +38,7 @@ class Card:
         # of infinite cycle. We'll address this by just getting new copies
         # by reparsing.
         self.doc = parseString(card_template)
-        self.proc = inkproc
+        self._proc = inkproc
         self.user_script = user_script
         # Pass the Selection class to Card, or if you want to subclass
         # Selection to add more template_funcs or similar, then pass the
@@ -72,7 +72,7 @@ class Card:
         self.tb_removed: list[str] = []
 
         self.measurement_units: Unit = self.get_measurement_units()
-        self.proc.units = self.measurement_units
+        self._proc.units = self.measurement_units
 
         # the lock used to break certain Selection methods from running when
         # inside an Inkscape context
@@ -151,15 +151,13 @@ class Card:
             # some svg image templating, we can just panic.
             self._lock = True
 
-        self.proc.load(self.inkfile.name)
+        self._proc.load(self.inkfile.name)
 
-        # yield only once to contexmanager. this is all from example docs
-        # should really use more try blocks but...
-        yield self.proc
+        yield self._proc
 
         # Stuff that should happen when contextmanager releases the yield
         # by `yielding` again... at least I think that's how it works.
         if read_only is not True:
-            self.proc.export_page(self.inkfile.name)
+            self._proc.export_page(self.inkfile.name)
             self.doc = parse(self.inkfile)
             self._lock = False
