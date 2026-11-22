@@ -18,7 +18,7 @@ TEMPLATE_BRACKETS_RE = re.compile(r"(?<!\\){([^{]*?)(?<!\\)}")
 
 
 def inkscape_lock(f: Callable[P, T]) -> Callable[P, T]:
-    """Prevent users and other code from manipulating NodeSets when
+    """Prevent users and other code from manipulating Selections when
     Inkscape is doing changes at the same time."""
 
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
@@ -26,7 +26,9 @@ def inkscape_lock(f: Callable[P, T]) -> Callable[P, T]:
         # args[0] should always be "self"
         if args[0].card._lock is True:  # type: ignore
             raise Exception(
-                "Inkscape context: do not run this method, because its "
+                f"Inkscape context: do not run `{f.__name__}()` "
+                "inside an Inkscape context block, "
+                ", because its "
                 "result will be overridden when Inkscape finishes."
             )
         return f(*args, **kwargs)
@@ -34,7 +36,7 @@ def inkscape_lock(f: Callable[P, T]) -> Callable[P, T]:
     return wrapper
 
 
-class NodeSet:
+class Selection:
     def __init__(
         self,
         card: "Card",
@@ -53,7 +55,7 @@ class NodeSet:
         return ret
 
     @inkscape_lock
-    def update(self) -> "NodeSet":
+    def update(self) -> "Selection":
         ids = self.id_list()
         root = self.card.doc.documentElement
         assert root is not None
@@ -61,25 +63,25 @@ class NodeSet:
         return self.find_ids(ids)
 
     # Chain template_func method calls together. Each returns a new
-    # NodeSet object, with a set of XML nodes to be affected by
+    # Selection object, with a set of XML nodes to be affected by
     # the next method call.
 
-    def find_ids(self, ids: list[str]) -> "NodeSet":
+    def find_ids(self, ids: list[str]) -> "Selection":
         new_set = []
         for node in self.nodes:
             for sn in node.getElementsByTagName("*"):
                 if sn.getAttribute("id") in ids:
                     new_set.append(sn)
-        return NodeSet(self.card, new_set)
+        return Selection(self.card, new_set)
 
-    def find_class(self, class_tag: str | list[str]) -> "NodeSet":
+    def find_class(self, class_tag: str | list[str]) -> "Selection":
         new_set = []
         if isinstance(class_tag, str):
             for node in self.nodes:
                 for sn in node.getElementsByTagName("*"):
                     if class_tag in sn.getAttribute("class").split():
                         new_set.append(sn)
-            return NodeSet(self.card, new_set)
+            return Selection(self.card, new_set)
         else:
             for node in self.nodes:
                 for sn in node.getElementsByTagName("*"):
@@ -87,33 +89,33 @@ class NodeSet:
                         if snclass in class_tag:
                             new_set.append(sn)
                             break
-            return NodeSet(self.card, new_set)
+            return Selection(self.card, new_set)
 
     find_classes = find_class
 
-    def filter_class(self, class_tag: str) -> "NodeSet":
+    def filter_class(self, class_tag: str) -> "Selection":
         new_set = []
         for node in self.nodes:
             if class_tag in node.getAttribute("class").split():
                 new_set.append(node)
-        return NodeSet(self.card, new_set)
+        return Selection(self.card, new_set)
 
-    def find_elements(self, element_tag: str) -> "NodeSet":
+    def find_elements(self, element_tag: str) -> "Selection":
         new_set = []
         for node in self.nodes:
             for sn in node.getElementsByTagName(element_tag):
                 new_set.append(sn)
-        return NodeSet(self.card, new_set)
+        return Selection(self.card, new_set)
 
-    def filter_element(self, element_tag: str) -> "NodeSet":
+    def filter_element(self, element_tag: str) -> "Selection":
         new_set = []
         for node in self.nodes:
             if node.tagName == element_tag:
                 new_set.append(node)
-        return NodeSet(self.card, new_set)
+        return Selection(self.card, new_set)
 
     @inkscape_lock
-    def set_text(self, text: str) -> "NodeSet":
+    def set_text(self, text: str) -> "Selection":
         new_set = []
         # get styles
         for node in self.nodes:
@@ -139,10 +141,10 @@ class NodeSet:
 
             # Return node because we did stuff to it
             new_set.append(node)
-        return NodeSet(self.card, new_set)
+        return Selection(self.card, new_set)
 
     @inkscape_lock
-    def remove(self) -> "NodeSet":
+    def remove(self) -> "Selection":
         self.card.tb_removed.extend(self.id_list())
         return self
 
@@ -152,7 +154,7 @@ class NodeSet:
                 par.removeChild(node)
 
     @inkscape_lock
-    def set_attrib(self, attribs: dict[str, str]) -> "NodeSet":
+    def set_attrib(self, attribs: dict[str, str]) -> "Selection":
         for node in self.nodes:
             for k, v in attribs.items():
                 node.setAttribute(k, v)
@@ -162,7 +164,7 @@ class NodeSet:
         self,
         action: Literal[Act.ROTATE, Act.TRANSLATE, Act.SCALE],
         args: float | tuple[float, float],
-    ) -> "NodeSet":
+    ) -> "Selection":
         ids = self.id_list()
 
         with self.card.inkscape() as inkscape:

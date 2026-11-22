@@ -3,13 +3,13 @@ import tempfile
 
 from contextlib import contextmanager
 from svgtempl.inkscapeprocess import InkscapeProcess
-from svgtempl.nodeset import NodeSet
+from svgtempl.selection import Selection
 from svgtempl.spreadsheet import DataCell
 from svgtempl.units import Unit
 from xml.dom.minidom import Document, parse, parseString
 from typing import Callable, Generator, TYPE_CHECKING
 
-TemplateFunction = Callable[..., "NodeSet"]
+TemplateFunction = Callable[..., "Selection"]
 
 
 ID_RE = re.compile(r"(.*svgtempl_)\d+")
@@ -28,7 +28,7 @@ class Card:
         card_template: str,
         inkproc: InkscapeProcess,
         user_script: Callable[["Card"], None],
-        node_type: type["NodeSet"] | None = None,
+        node_type: type["Selection"] | None = None,
         text_templater: Callable[[re.Match], str] | None = None,
         copies: int = 1,
     ) -> None:
@@ -40,9 +40,9 @@ class Card:
         self.doc = parseString(card_template)
         self.proc = inkproc
         self.user_script = user_script
-        # Pass the NodeSet class to Card, or if you want to subclass
-        # NodeSet to add more template_funcs or similar, then pass the
-        # subclass ("UserNodeSet" or something like that) instead.
+        # Pass the Selection class to Card, or if you want to subclass
+        # Selection to add more template_funcs or similar, then pass the
+        # subclass ("UserSelection" or something like that) instead.
         self.node_type = node_type
         if text_templater is not None:
             self.bracket_handler = text_templater
@@ -74,7 +74,7 @@ class Card:
         self.measurement_units: Unit = self.get_measurement_units()
         self.proc.units = self.measurement_units
 
-        # the lock used to break certain NodeSet methods from running when
+        # the lock used to break certain Selection methods from running when
         # inside an Inkscape context
         self._lock = False
 
@@ -94,10 +94,10 @@ class Card:
         return self.doc
 
     @property
-    def root(self) -> NodeSet:
+    def root(self) -> Selection:
         root = self.doc.documentElement
         assert root is not None
-        return NodeSet(self, root)
+        return Selection(self, root)
 
     def new_id(self, orig: str | None = None) -> str:
         if orig is None:

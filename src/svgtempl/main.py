@@ -40,7 +40,7 @@ def main() -> int:
     #   Page svg template file
     #     A4 or Letter toggle
     #   Card generator script user file
-    #   Separate NodeSet subclassing file?
+    #   Separate Selection subclassing file?
     #   Spreadsheet template
     #     Toggle ODS or CSV
     args = argparser.parse_args()
