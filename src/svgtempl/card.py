@@ -28,8 +28,8 @@ class Card:
         card_template: str,
         inkproc: InkscapeProcess,
         user_script: Callable[["Card"], None],
-        node_type: type["Selection"] | None = None,
-        text_templater: Callable[[re.Match], str] | None = None,
+        selection_type: type["Selection"] | None = None,
+        text_bracket_handler: Callable[[re.Match], str] | None = None,
         copies: int = 1,
     ) -> None:
         self.data = row_data
@@ -43,9 +43,9 @@ class Card:
         # Pass the Selection class to Card, or if you want to subclass
         # Selection to add more template_funcs or similar, then pass the
         # subclass ("UserSelection" or something like that) instead.
-        self.node_type = node_type
-        if text_templater is not None:
-            self.bracket_handler = text_templater
+        self.selection_type = selection_type
+        if text_bracket_handler is not None:
+            self.bracket_handler = text_bracket_handler
         else:
             self.bracket_handler = default_bracket_handler
         self.cur_id = 0
