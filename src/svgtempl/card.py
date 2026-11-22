@@ -1,28 +1,21 @@
-import math
 import re
 import tempfile
 
 from contextlib import contextmanager
 from copy import copy
-from enum import Flag, auto
 from svgtempl.actions import Act
 from svgtempl.inkscapeprocess import InkscapeProcess
 from svgtempl.spreadsheet import DataCell
-from svgtempl.types import Point, Matrix, Transform
+from svgtempl.xml import get_styles, add_tspans
+from svgtempl.text import parse_markup, Style
 from svgtempl.units import Unit
-from xml.dom.minidom import Document, Element, Text, parse, parseString
+from xml.dom.minidom import Document, Element, parse, parseString
 from typing import Callable, Generator, Literal, ParamSpec, TypeVar
 
 T = TypeVar("T")
 P = ParamSpec("P")
 
 TemplateFunction = Callable[..., "NodeSet"]
-
-
-class Style(Flag):
-    NONE = 0
-    BOLD = auto()
-    ITALIC = auto()
 
 
 ID_RE = re.compile(r"(.*svgtempl_)\d+")
@@ -186,6 +179,7 @@ def default_bracket_handler(m: re.Match) -> str:
 def inkscape_lock(f: Callable[P, T]) -> Callable[P, T]:
     """Prevent users and other code from manipulating NodeSets when
     Inkscape is doing changes at the same time."""
+
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
         # This seems really hard or impossible to annotate sensibly
         # args[0] should always be "self"
@@ -346,198 +340,3 @@ class NodeSet:
                 inkscape.action(action, str(args[0]), str(args[1]))
 
         return self.card.root.find_ids(ids)
-
-
-def nearest_classed(node: Element, target_class: str) -> Element | None:
-    # Get nearest element with class x above this node in the document
-    # (xml closest)
-    cur: Element | None = None
-    root = node.ownerDocument
-    if root is None:
-        return None
-    for n in root.getElementsByTagName("*"):
-        if target_class in n.getAttribute("class").split():
-            cur = n
-        if n == node:
-            break
-    return cur
-
-
-def get_styles(node: Element) -> tuple[str, str, str]:
-    bold = None
-    italic = None
-    bold_italic = None
-    # pick up specific styles already present
-    for tspan in node.getElementsByTagName("tspan"):
-        if bold and italic and bold_italic:
-            break
-        if not isinstance(tspan, Element):
-            continue
-        if tspan.tagName != "tspan":
-            continue
-        style = tspan.getAttribute("style")
-        if not bold and "bold" in style and "italic" not in style:
-            bold = style
-            continue
-        if not italic and "italic" in style and "bold" not in style:
-            italic = style
-            continue
-        if not bold_italic and "italic" in style and "bold" in style:
-            bold_italic = style
-    # defaults
-    if not bold:
-        bold = "font-weight:bold;font-style:normal;"
-    if not italic:
-        italic = "font-style:italic;font-weight:normal;"
-    if not bold_italic:
-        bold_italic = "font-style:italic;font-weight:bold;"
-
-    return bold, italic, bold_italic
-
-
-def get_css(node: Element) -> dict[str, str]:
-    css = node.getAttribute("style")
-    ret = {}
-    for pair in css.split(";"):
-        k, v = pair.split(":")[0:2]
-        ret[k.strip()] = v.strip()
-    return ret
-
-
-def set_css(node: Element, css_in: dict[str, str]) -> None:
-    # Replace 'style' with new CSS
-    pairs = []
-    for k, v in css_in.items():
-        pairs.append(f"{k}:{v}")
-    node.setAttribute("style", ";".join(pairs))
-
-
-def update_css(node: Element, css_update: dict[str, str]) -> None:
-    # Update 'style' with changes
-    css = get_css(node)
-    for k, v in css_update.items():
-        css[k] = v
-    set_css(node, css)
-
-
-FORMATTING_CHARS_RE = re.compile(r"(\\.|\\$|\*|_)")
-
-
-def parse_markup(text: str) -> list[tuple[Style, str]]:
-    ret: list[tuple[Style, str]] = []
-    state = Style.NONE
-    prev_state = state
-
-    current: list[str] = []
-
-    for s in FORMATTING_CHARS_RE.split(text):
-        # No need to modulo, because the splitters are all static and known
-        if not s:
-            continue
-        elif s.startswith("\\"):
-            if len(s) >= 2:
-                current.append(s[1:])
-        elif s == "*":
-            state ^= Style.BOLD
-        elif s == "_":
-            state ^= Style.ITALIC
-        else:
-            current.append(s)
-
-        if prev_state != state:
-            if len(current) > 0:
-                ret.append((prev_state, "".join(current)))
-            current.clear()
-            prev_state = state
-
-    if len(current) > 0:
-        ret.append((state, "".join(current)))
-
-    return ret
-
-
-def add_tspans(
-    node: Element,
-    spans: list[tuple[Style, str]],
-    bold: str,
-    italic: str,
-    bold_italic: str,
-) -> None:
-    # No recursion, all flat tspans
-    doc = node.ownerDocument
-    assert doc is not None
-    for style, text in spans:
-        t = Text()
-        t.data = text
-        # If Style is NONE, add a xml.dom.minidom.Text node directly.
-        if style == Style.NONE:
-            node.appendChild(t)
-            continue
-        # Otherwise, add a tspan node with a style, and add a Text to that
-        tspan = Element("tspan")
-        tspan.appendChild(t)
-        styleattr = doc.createAttribute("style")
-        if style == Style.BOLD:
-            styleattr.value = bold
-        elif style == Style.ITALIC:
-            styleattr.value = italic
-        elif style == Style.BOLD | Style.ITALIC:
-            styleattr.value = bold_italic
-        tspan.setAttributeNode(styleattr)
-        node.appendChild(tspan)
-
-    return None
-
-
-TRANSFORM_CALLS_RE = re.compile(r"(\w+)\(([^)]*)\)")
-
-
-def get_transforms(node: Element) -> Transform:
-    #     // calculate delta transform point
-    #     var px = deltaTransformPoint(matrix, { x: 0, y: 1 });
-    #     var py = deltaTransformPoint(matrix, { x: 1, y: 0 });
-    tr_field = node.getAttribute("transform").strip()
-
-    if not tr_field:
-        return Transform(0, 0, 0, 0, 0, 0, 0)
-
-    for m in TRANSFORM_CALLS_RE.findall(tr_field):
-        call = m.group(1).strip().lowercase()
-        params = m.group(2).strip()
-        if call == "matrix":
-            vals = re.split(r"\s*,\s*|\s*", params)
-            matrix_res = Matrix(*(float(s) for s in vals))
-        elif call == "":
-            ...
-        ...
-
-    return Transform(*(map(sum, zip(matrix_res, ...))))
-
-
-def deltatransform_point(m: Matrix, p: Point) -> Point:
-    dx = p.x * m.a + p.y * m.c
-    dy = p.x * m.b + p.y * m.d
-    return Point(dx, dy)
-
-
-def decompose_matrix(m: Matrix) -> Transform:
-    px = deltatransform_point(..., Point(0, 1))
-    py = deltatransform_point(..., Point(1, 0))
-
-    skewx = (180 / math.pi) * math.atan2(px.y, px.x) - 90
-    #     // calculate skew
-    #     var skewX = ((180 / Math.PI) * Math.atan2(px.y, px.x) - 90);
-    #     var skewY = ((180 / Math.PI) * Math.atan2(py.y, py.x));
-
-    #     return {
-
-    #         translateX: matrix.e,
-    #         translateY: matrix.f,
-    #         scaleX: Math.sqrt(matrix.a * matrix.a + matrix.b * matrix.b),
-    #         scaleY: Math.sqrt(matrix.c * matrix.c + matrix.d * matrix.d),
-    #         skewX: skewX,
-    #         skewY: skewY,
-    #         rotation: skewX // rotation is the same as skew x
-    #     };
-    # }
-    return Transform(0, 0, 0, 0, 0, 0, 0)
