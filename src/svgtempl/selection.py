@@ -42,10 +42,18 @@ class Selection:
         self,
         nodes: list[Element] | Element,
     ):
+        nodes = []
         if not isinstance(nodes, list):
-            self.nodes = [nodes]
+            nodes = [nodes]
         else:
-            self.nodes = nodes
+            nodes = nodes
+
+        new_nodes = []
+        for x in nodes:
+            if x not in new_nodes:
+                new_nodes.append(x)
+
+        self.nodes = new_nodes
 
     def id_list(self) -> list[str]:
         ret = []
