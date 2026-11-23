@@ -37,11 +37,11 @@ def inkscape_lock(f: Callable[P, T]) -> Callable[P, T]:
 
 class Selection:
     card: "Card"
-    store: dict[str, list[str]] = {}
+    store: dict[str, tuple[str, ...]] = {}
 
     def __init__(
         self,
-        nodes: list[Element] | Element,
+        nodes: list[Element] | tuple[Element] | Element,
     ):
         nodes = []
         if not isinstance(nodes, list):
@@ -54,15 +54,17 @@ class Selection:
             if x not in new_nodes:
                 new_nodes.append(x)
 
-        self.nodes = new_nodes
+        self.nodes = tuple(new_nodes)
 
-    def id_list(self) -> list[str]:
+    def id_list(self) -> tuple[str, ...]:
         ret = []
         for node in self.nodes:
             ret.append(node.getAttribute("id"))
-        return ret
+        return tuple(ret)
 
     def store_as(self, key: str) -> "Selection":
+        # Convenience func to save ids if you don't want to interrupt a
+        # function class chain
         self.store[key] = self.id_list()
         return self
 
@@ -71,14 +73,14 @@ class Selection:
         ids = self.id_list()
         root = self.card.doc.documentElement
         assert root is not None
-        self.nodes = [root]
+        self.nodes = (root,)
         return self.find_ids(ids)
 
     # Chain template_func method calls together. Each returns a new
     # Selection object, with a set of XML nodes to be affected by
     # the next method call.
 
-    def find_ids(self, ids: list[str]) -> "Selection":
+    def find_ids(self, ids: list[str] | tuple[str, ...]) -> "Selection":
         new_set = []
         for node in self.nodes:
             for sn in node.getElementsByTagName("*"):
