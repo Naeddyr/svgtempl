@@ -92,12 +92,7 @@ class InkscapeProcess:
         # sure there's going to be some kind of content in the future (from
         # writing input into stdin as a an action)
 
-        # Actions: maybe handle these as a seq of tuples of strings, instead
-        # of as a big string. Join with `";"` here.
-
         out_lines: list[str] = []
-
-        # action = ";".join((" ".join(s.strip() for s in a),) for a in actions)
 
         assert len(actions) > 0
         assert isinstance(actions[0], Act)
@@ -197,17 +192,3 @@ class InkscapeProcess:
             Act.EXPORT_DO,
         )
         return
-
-
-card = None
-
-if __name__ == "__main__":
-    argparser = argparse.ArgumentParser()
-    argparser.add_argument("file", type=Path)
-    args = argparser.parse_args()
-    print(type(args.file), args.file)
-    sheet = InkscapeProcess(args.file)
-
-    # with open("card.svg", "r") as f:
-    #     card = etree.fromstring(f.read())
-    # print(etree.dump(card))

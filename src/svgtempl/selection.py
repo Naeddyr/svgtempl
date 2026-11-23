@@ -27,8 +27,7 @@ def inkscape_lock(f: Callable[P, T]) -> Callable[P, T]:
         if args[0].card._lock is True:  # type: ignore
             raise Exception(
                 f"Inkscape context: do not run `{f.__name__}()` "
-                "inside an Inkscape context block, "
-                ", because its "
+                "inside an Inkscape context block because its "
                 "result will be overridden when Inkscape finishes."
             )
         return f(*args, **kwargs)
@@ -37,12 +36,12 @@ def inkscape_lock(f: Callable[P, T]) -> Callable[P, T]:
 
 
 class Selection:
+    card: "Card"
+
     def __init__(
         self,
-        card: "Card",
         nodes: list[Element] | Element,
     ):
-        self.card = card
         if not isinstance(nodes, list):
             self.nodes = [nodes]
         else:
@@ -72,7 +71,7 @@ class Selection:
             for sn in node.getElementsByTagName("*"):
                 if sn.getAttribute("id") in ids:
                     new_set.append(sn)
-        return Selection(self.card, new_set)
+        return type(self)(new_set)
 
     def find_class(self, class_tag: str | list[str]) -> "Selection":
         new_set = []
@@ -81,7 +80,7 @@ class Selection:
                 for sn in node.getElementsByTagName("*"):
                     if class_tag in sn.getAttribute("class").split():
                         new_set.append(sn)
-            return Selection(self.card, new_set)
+            return type(self)(new_set)
         else:
             for node in self.nodes:
                 for sn in node.getElementsByTagName("*"):
@@ -89,7 +88,7 @@ class Selection:
                         if snclass in class_tag:
                             new_set.append(sn)
                             break
-            return Selection(self.card, new_set)
+            return type(self)(new_set)
 
     find_classes = find_class
 
@@ -98,21 +97,21 @@ class Selection:
         for node in self.nodes:
             if class_tag in node.getAttribute("class").split():
                 new_set.append(node)
-        return Selection(self.card, new_set)
+        return type(self)(new_set)
 
     def find_elements(self, element_tag: str) -> "Selection":
         new_set = []
         for node in self.nodes:
             for sn in node.getElementsByTagName(element_tag):
                 new_set.append(sn)
-        return Selection(self.card, new_set)
+        return type(self)(new_set)
 
     def filter_element(self, element_tag: str) -> "Selection":
         new_set = []
         for node in self.nodes:
             if node.tagName == element_tag:
                 new_set.append(node)
-        return Selection(self.card, new_set)
+        return type(self)(new_set)
 
     @inkscape_lock
     def set_text(self, text: str) -> "Selection":
@@ -141,7 +140,7 @@ class Selection:
 
             # Return node because we did stuff to it
             new_set.append(node)
-        return Selection(self.card, new_set)
+        return type(self)(new_set)
 
     @inkscape_lock
     def remove(self) -> "Selection":

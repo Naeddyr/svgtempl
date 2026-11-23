@@ -43,8 +43,6 @@ class Act(StrEnum):
     TRANSLATE = "transform-translate"
 
 
-# transform-scale 	Scale selected objects by scale factor
-# transform-translate 	Translate selected objects (dx,dy)
 # clone 	Create a clone (a copy linked to the original) of selected object
 # clone-link 	Relink the selected clones to the object currently on the clipboard
 # clone-link-lpe 	Creates a new path, applies the Clone original LPE, and refers it to the selected path
@@ -108,14 +106,12 @@ class Act(StrEnum):
 # path-split 	Split selected paths into non-overlapping sections
 # path-union 	Create union of selected paths
 # pattern-to-object 	Extract objects from a tiled pattern fill
-# quit 	Quit Inkscape, check for data loss
-# select 	Select by ID (deprecated)
 # select-all 	Select all; options
-# select-by-class 	Select by class
-# select-by-element 	Select by SVG element (e.g. 'rect')
+##### select-by-class 	Select by class
+##### select-by-element 	Select by SVG element (e.g. 'rect')
 # select-by-id 	Select by ID
-# select-by-selector 	Select by CSS selector
-# select-clear 	Clear selection
+##### select-by-selector 	Select by CSS selector
+##### select-clear 	Clear selection
 # select-invert 	Invert selection; options
 # selection-bottom 	Lower selection to bottom
 # selection-group 	Group selected objects
@@ -144,21 +140,8 @@ class Act(StrEnum):
 # text-unflow 	Remove text from frame (creates a single-line text object)
 # text-unkern 	Remove all manual kerns and glyph rotations from a text object
 # transform-grow 	Grow/shrink selected objects
-# transform-grow-screen 	Grow/shrink selected objects relative to zoom level
 # transform-grow-step 	Grow/shrink selected objects by multiple of step value
 # transform-remove 	Remove any transforms from selected objects
-# transform-rotate 	Rotate selected objects by degrees
-# transform-scale 	Scale selected objects by scale factor
-# transform-translate 	Translate selected objects (dx,dy)
-# tutorial-advanced 	Advanced Inkscape topics
-# tutorial-basic 	Getting started with Inkscape
-# tutorial-calligraphy 	Using the Calligraphy pen tool
-# tutorial-design 	Principles of design in the tutorial form
-# tutorial-interpolate 	Using the interpolate extension
-# tutorial-shapes 	Using shape tools to create and edit shapes
-# tutorial-tips 	Miscellaneous tips and tricks
-# tutorial-tracing 	Using bitmap tracing
-# tutorial-tracing-pixelart 	Using Trace Pixel Art dialog
 # unhide-all 	Unhide all objects
 # unlock-all 	Unlock all objects
 # unselect-by-id 	Deselect by ID

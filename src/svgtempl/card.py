@@ -28,7 +28,7 @@ class Card:
         card_template: str,
         inkproc: InkscapeProcess,
         user_script: Callable[["Card"], None],
-        selection_type: type["Selection"] | None = None,
+        selection_type: type["Selection"] = Selection,
         text_bracket_handler: Callable[[re.Match], str] | None = None,
         copies: int = 1,
     ) -> None:
@@ -43,7 +43,9 @@ class Card:
         # Pass the Selection class to Card, or if you want to subclass
         # Selection to add more template_funcs or similar, then pass the
         # subclass ("UserSelection" or something like that) instead.
-        self.selection_type = selection_type
+        self.selection_type = type(
+            "CardNodeSelection", (selection_type,), {"card": self}
+        )
         if text_bracket_handler is not None:
             self.bracket_handler = text_bracket_handler
         else:
@@ -97,7 +99,7 @@ class Card:
     def root(self) -> Selection:
         root = self.doc.documentElement
         assert root is not None
-        return Selection(self, root)
+        return self.selection_type(root)
 
     def new_id(self, orig: str | None = None) -> str:
         if orig is None:
