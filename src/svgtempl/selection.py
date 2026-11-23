@@ -54,7 +54,7 @@ class Selection:
             if x not in new_nodes:
                 new_nodes.append(x)
 
-        self.nodes = tuple(new_nodes)
+        self.nodes: tuple[Element, ...] = tuple(new_nodes)
 
     def id_list(self) -> tuple[str, ...]:
         ret = []
@@ -168,10 +168,18 @@ class Selection:
                 par.removeChild(node)
 
     @inkscape_lock
-    def set_attrib(self, attribs: dict[str, str]) -> "Selection":
+    def set_attrib(
+        self, attribs: dict[str, str | Callable[[str], str]]
+    ) -> "Selection":
+        """Set attributes of an element using a dict that replaces values.
+        Instead of a value, you may provide a function that reads the original
+        value and returns a string based on it."""
         for node in self.nodes:
             for k, v in attribs.items():
-                node.setAttribute(k, v)
+                if not isinstance(v, str):  # how do you check for a function
+                    node.setAttribute(k, v(node.getAttribute(k)))
+                else:
+                    node.setAttribute(k, v)
         return self
 
     def _simple_transform(
