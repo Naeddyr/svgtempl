@@ -169,6 +169,19 @@ class InkscapeProcess:
 
         return ret
 
+    def current_selection(self) -> list[str]:
+        ret = []
+        text = self.action(Act.PRINT_SELECT)
+
+        # Lines look like
+        # rect1 cloned: false ref: 1 href: 0 total href: 0
+        # path1 cloned: false ref: 1 href: 0 total href: 0
+        for line in text:
+            if words := line.split():
+                ret.append(words[0])
+
+        return ret
+
     def clear(self) -> None:
         self.action(Act.SELECT_CLEAR)
 
