@@ -203,5 +203,6 @@ class Selection:
                 assert isinstance(args, tuple)
                 assert len(args) == 2
                 inkscape.action(action, str(args[0]), str(args[1]))
+            inkscape.clear()
 
         return self.card.root.find_ids(ids)

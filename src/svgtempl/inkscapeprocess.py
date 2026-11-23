@@ -169,6 +169,9 @@ class InkscapeProcess:
 
         return ret
 
+    def clear(self) -> None:
+        self.action(Act.SELECT_CLEAR)
+
     def load(self, f: Path | str) -> None:
         # Can't annotate the output of NamedTemporaryFile, so just remember
         # to pass the `.name` property when using them.

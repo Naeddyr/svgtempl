@@ -15,7 +15,11 @@ class Act(StrEnum):
     # FILE_CLOSE = "file-close"
 
     # SELECTION STUFF
-    SELECT = "select-by-id"
+    ADD = "select-by-id"
+    SELECT_CLEAR = "select-clear"
+    ADD_BY_CLASS = "select-by-class"
+    ADD_BY_ELEMENT = "select-by-element"
+    ADD_BY_CSS_SELECTOR = "select-by-selector"
 
     # INFORMATION
     # query-all 	Query 'x', 'y', 'width', and 'height'
@@ -107,11 +111,6 @@ class Act(StrEnum):
 # path-union 	Create union of selected paths
 # pattern-to-object 	Extract objects from a tiled pattern fill
 # select-all 	Select all; options
-##### select-by-class 	Select by class
-##### select-by-element 	Select by SVG element (e.g. 'rect')
-# select-by-id 	Select by ID
-##### select-by-selector 	Select by CSS selector
-##### select-clear 	Clear selection
 # select-invert 	Invert selection; options
 # selection-bottom 	Lower selection to bottom
 # selection-group 	Group selected objects
