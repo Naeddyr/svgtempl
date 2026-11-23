@@ -9,10 +9,14 @@ class StrEnum(enum.Enum):
 class Act(StrEnum):
     QUIT = "quit"
 
+    # META
+    # Maybe knowing the inkscape version is useful if the 'API' changes
+    VERSION = "inkscape-version"
+
     # FILE STUFF
     OPEN = "file-open"
     FROM_TEMPLATE = "file-new"
-    # FILE_CLOSE = "file-close"
+    FILE_CLOSE = "file-close"
 
     # SELECTION STUFF
     ADD = "select-by-id"
@@ -20,11 +24,16 @@ class Act(StrEnum):
     ADD_BY_CLASS = "select-by-class"
     ADD_BY_ELEMENT = "select-by-element"
     ADD_BY_CSS_SELECTOR = "select-by-selector"
+    UNSELECT = "unselect-by-id"
 
     # INFORMATION
     # query-all 	Query 'x', 'y', 'width', and 'height'
-    QUERY_ALL = "query-all"
     # Returns a list with all objects: id,x,y,width,height
+    QUERY_ALL = "query-all"
+
+    # Returns a list of id + "cloned: bool", "ref", "href", "total href"
+    # XXX make this into a function
+    PRINT_SELECT = "select-list"
 
     # These are not exactly needed...
     # They can be used to query just one selected object, by why?
@@ -46,22 +55,20 @@ class Act(StrEnum):
     SCALE = "transform-scale"
     TRANSLATE = "transform-translate"
 
+    DELETE = "delete-selection"
+
+
+
 
 # clone 	Create a clone (a copy linked to the original) of selected object
-# clone-link 	Relink the selected clones to the object currently on the clipboard
-# clone-link-lpe 	Creates a new path, applies the Clone original LPE, and refers it to the selected path
 # clone-unlink 	Cut the selected clones' links to the originals, turning them into standalone objects
 # clone-unlink-recursively 	Unlink all clones in the selection, even if they are in groups.
-# delete 	Delete selected items, nodes or text.
-# delete-selection 	Delete selected items
 # duplicate 	Duplicate Selected Objects
 # edit-remove-filter 	Remove any filters from selected objects
 # export-area-page 	Export page area
 # export-background 	Include background color in exported file
 # export-background-opacity 	Include background opacity in exported file
-# export-do 	Do export
 # export-dpi 	Set export DPI
-# export-filename 	Set export file name
 # export-height 	Set export height
 # export-margin 	Set additional export margin
 # export-overwrite 	Allow to overwrite existing files during export
@@ -129,7 +136,6 @@ class Act(StrEnum):
 # selection-unhide-below 	Unhide all items inside selected objects
 # selection-unlock 	Unlock all selected objects
 # selection-unlock-below 	Unlock all items inside selected objects
-# select-list 	Print a list of objects in current selection
 # select-original 	Select the object to which the selected clone is linked
 # text-convert-to-regular 	Convert flowed text to regular text object (preserves appearance)
 # text-flow-into-frame 	Put text into a frame (path or shape), creating a flowed text linked to the frame object
@@ -143,5 +149,4 @@ class Act(StrEnum):
 # transform-remove 	Remove any transforms from selected objects
 # unhide-all 	Unhide all objects
 # unlock-all 	Unlock all objects
-# unselect-by-id 	Deselect by ID
 # vacuum-defs 	Remove unused definitions (gradients, etc.)
