@@ -37,6 +37,7 @@ def inkscape_lock(f: Callable[P, T]) -> Callable[P, T]:
 
 class Selection:
     card: "Card"
+    store: dict[str, list[str]] = {}
 
     def __init__(
         self,
@@ -60,6 +61,10 @@ class Selection:
         for node in self.nodes:
             ret.append(node.getAttribute("id"))
         return ret
+
+    def store_as(self, key: str) -> "Selection":
+        self.store[key] = self.id_list()
+        return self
 
     @inkscape_lock
     def update(self) -> "Selection":
