@@ -1,5 +1,5 @@
 import argparse
-import importlib
+import importlib.util
 import sys
 import tempfile
 
@@ -157,7 +157,10 @@ if __name__ == "__main__":
 def import_from_path(module_name: str, file_path: str):
     # taken straight from https://docs.python.org/3/library/importlib.html
     spec = importlib.util.spec_from_file_location(module_name, file_path)
+    assert spec is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
-    spec.loader.exec_module(module)
+    loader = spec.loader
+    assert loader is not None
+    loader.exec_module(module)
     return module
