@@ -1,4 +1,3 @@
-import argparse
 import subprocess
 
 from svgtempl.actions import Act

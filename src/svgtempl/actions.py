@@ -12,19 +12,27 @@ class Act(StrEnum):
     # META
     # Maybe knowing the inkscape version is useful if the 'API' changes
     VERSION = "inkscape-version"
+    INKSCAPE_VERSION = "inkscape-version"
 
     # FILE STUFF
     OPEN = "file-open"
+    FILE_OPEN = "file-open"
     FROM_TEMPLATE = "file-new"
+    FILE_NEW = "file-new"
     FILE_CLOSE = "file-close"
 
     # SELECTION STUFF
     ADD = "select-by-id"
+    SELECT_BY_ID = "select-by-id"
     SELECT_CLEAR = "select-clear"
     ADD_BY_CLASS = "select-by-class"
+    SELECT_BY_CLASS = "select-by-class"
     ADD_BY_ELEMENT = "select-by-element"
+    SELECT_BY_ELEMENT = "select-by-element"
     ADD_BY_CSS_SELECTOR = "select-by-selector"
+    SELECT_BY_CSS_SELECTOR = "select-by-selector"
     UNSELECT = "unselect-by-id"
+    UNSELECT_BY_ID = "unselect-by-id"
 
     # INFORMATION
     # query-all 	Query 'x', 'y', 'width', and 'height'
@@ -33,6 +41,7 @@ class Act(StrEnum):
     # Returns a list of id + "cloned: bool", "ref", "href", "total href"
     # XXX make this into a function
     PRINT_SELECT = "select-list"
+    SELECT_LIST = "select-list"
 
     # These are not exactly needed...
     # They can be used to query just one selected object, by why?
@@ -44,17 +53,23 @@ class Act(StrEnum):
 
     # EXPORT
     EXPORT_NAME = "export-filename"
+    EXPORT_FILENAME = "export-filename"
     EXPORT_TYPE = "export-type"
     EXPORT_AREA_IS_PAGE = "export-area-page"
+    EXPORT_AREA_PAGE = "export-area-page"
     EXPORT_DO = "export-do"
 
     # Transform stuff
     # Probably will only need rotate most of the time
     ROTATE = "transform-rotate"
+    TRANSFORM_ROTATE = "transform-rotate"
     SCALE = "transform-scale"
+    TRANSFORM_SCALE = "transform-scale"
     TRANSLATE = "transform-translate"
+    TRANSFORM_TRANSLATE = "transform-translate"
 
     DELETE = "delete-selection"
+    DELETE_SELECTION = "delete-selection"
 
     # What the heck, add most.
     CLONE = "clone"
@@ -62,7 +77,6 @@ class Act(StrEnum):
     CLONE_UNLINK_RECURSIVELY = "clone-unlink-recursively"
     DUPLICATE = "duplicate"
     EDIT_REMOVE_FILTER = "edit-remove-filter"
-    EXPORT_AREA_PAGE = "export-area-page"
     EXPORT_BACKGROUND = "export-background"
     EXPORT_BACKGROUND_OPACITY = "export-background-opacity"
     EXPORT_DPI = "export-dpi"
@@ -73,8 +87,6 @@ class Act(StrEnum):
     EXPORT_TEXT_TO_PATH = "export-text-to-path"
     EXPORT_USE_HINTS = "export-use-hints"
     EXPORT_WIDTH = "export-width"
-    FILE_NEW = "file-new"
-    INKSCAPE_VERSION = "inkscape-version"
     LAST_EFFECT = "last-effect"
     LAST_EFFECT_PREF = "last-effect-pref"
     OBJECT_ALIGN = "object-align"

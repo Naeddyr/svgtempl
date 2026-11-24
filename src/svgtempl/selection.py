@@ -182,6 +182,7 @@ class Selection:
                     node.setAttribute(k, v)
         return self
 
+    @inkscape_lock
     def _simple_transform(
         self,
         action: Literal[Act.ROTATE, Act.TRANSLATE, Act.SCALE],
@@ -191,7 +192,7 @@ class Selection:
 
         with self.card.inkscape() as inkscape:
             # make a selection of all the id'd objects
-            inkscape.action(Act.SELECT, *ids)
+            inkscape.action(Act.ADD, *ids)
             # perform the transform actions, so we don't need to do it manually
             if action == Act.ROTATE:
                 assert isinstance(args, float)
