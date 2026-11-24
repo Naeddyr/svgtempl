@@ -43,8 +43,7 @@ class Selection:
         self,
         nodes: list[Element] | tuple[Element] | Element,
     ):
-        nodes = []
-        if not isinstance(nodes, list):
+        if not isinstance(nodes, (list, tuple)):
             nodes = [nodes]
         else:
             nodes = nodes
