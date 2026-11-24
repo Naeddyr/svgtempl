@@ -132,6 +132,26 @@ class Card:
                 break
         return ret
 
+    def parse_inkfile(self) -> None:
+        self.inkfile.seek(0)
+        self.doc = parse(self.inkfile)
+        self.inkfile.seek(0)
+
+    def write_inkfile(self) -> None:
+        self.inkfile.seek(0)
+        self.inkfile.truncate()
+        self.doc.writexml(self.inkfile)
+        self.inkfile.flush()
+
+    def inkfile_export(self) -> None:
+        # I don't think this truncation before letting Inkscape export is
+        # necessary, but I'm adding `seek`, `truncate` and `flush` everywhere
+        # I can atm, so here goes.
+        self.inkfile.seek(0)
+        self.inkfile.truncate()
+        self._proc.export_page(self.inkfile.name)
+        self.inkfile.seek(0)
+
     @contextmanager
     def inkscape(
         self, read_only=False
@@ -150,7 +170,7 @@ class Card:
 
         self._in_context = True
 
-        self.doc.writexml(self.inkfile)
+        self.write_inkfile()
 
         if read_only is not True:
             self._lock = True
@@ -163,8 +183,7 @@ class Card:
         # by `yielding` again... at least I think that's how it works.
 
         if read_only is not True:
-            self._proc.export_page(self.inkfile.name)
-            self.doc = parse(self.inkfile)
+            self.parse_inkfile()
             self._lock = False
 
         self._in_context = False

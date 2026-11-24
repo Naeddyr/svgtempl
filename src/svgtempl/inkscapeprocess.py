@@ -158,6 +158,8 @@ class InkscapeProcess:
 
         ret = {}
         for line in queries:
+            if not line:
+                continue
             id, x, y, width, height = line.split(",")
             ret[id] = {
                 "x": float(x) / conv,
