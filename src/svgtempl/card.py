@@ -80,6 +80,9 @@ class Card:
         # inside an Inkscape context
         self._lock = False
 
+        # a check to see if any Inkscape context is running:
+        self._in_context = False
+
     def generate(self) -> Document:
         # Run user-provided script
         with tempfile.NamedTemporaryFile(mode="w+", suffix=".svg") as f:
@@ -140,17 +143,16 @@ class Card:
         # something from Inkscape, especially when you want to make changes
         # and then check the results.
 
+        if self._in_context:
+            raise Exception(
+                "Do not create an Inkscape context inside another."
+            )
+
+        self._in_context = True
+
         self.doc.writexml(self.inkfile)
 
         if read_only is not True:
-            # We break self.card.doc on purpose so that users will not modify
-            # a document that will be replaced by the export from Inkscape
-            # when closing the context
-            # HOWEVER, if there is a need to read the old data while inside
-            # inkscape context, we can provide the old reference as an explicit
-            # "deprecated" tree
-            # This should break typecheckers, too. This is a program to do
-            # some svg image templating, we can just panic.
             self._lock = True
 
         self._proc.load(self.inkfile.name)
@@ -159,7 +161,10 @@ class Card:
 
         # Stuff that should happen when contextmanager releases the yield
         # by `yielding` again... at least I think that's how it works.
+
         if read_only is not True:
             self._proc.export_page(self.inkfile.name)
             self.doc = parse(self.inkfile)
             self._lock = False
+
+        self._in_context = False
