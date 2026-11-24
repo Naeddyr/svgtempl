@@ -3,7 +3,8 @@ import re
 from copy import copy
 from svgtempl.actions import Act
 
-from svgtempl.xml import get_styles, add_tspans
+from svgtempl.svg import get_rotation
+from svgtempl.xml import get_id, get_styles, add_tspans
 from svgtempl.text import parse_markup, Style
 from xml.dom.minidom import Element
 from typing import Callable, Literal, ParamSpec, TypeVar, TYPE_CHECKING
@@ -206,3 +207,28 @@ class Selection:
             inkscape.clear()
 
         return self.card.root.find_ids(ids)
+
+    @inkscape_lock
+    def add_icons(self, icon_id: str) -> "Selection":
+        icon = self.card.root.find_ids([icon_id])
+        assert len(icon.nodes) == 1, (
+            f"There should be exactly 1 element with an id "
+            f"{icon_id=}, but found {len(icon.nodes)}"
+        )
+        icon_el = icon.nodes[0]
+        self.card.make_definition(icon_el)
+
+        anchor_pairs: list[tuple[str, str, float]] = []
+        for node in self.nodes:
+            origin_id = get_id(node)
+            rotation = get_rotation(node)
+            id, use_node = self.card.create_clone(origin_id)
+            self.card.anchors[id] = origin_id
+            anchor_pairs.append((id, origin_id, rotation))
+
+        with self.card.inkscape() as ink:
+            for id, origin, rot in anchor_pairs:
+                ink.align(id, origin)
+                ink.rotate(id, rot)
+
+        return self

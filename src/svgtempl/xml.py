@@ -59,6 +59,10 @@ def get_css(node: Element) -> dict[str, str]:
     return ret
 
 
+def get_id(node: Element) -> str:
+    return node.getAttribute("id")
+
+
 def set_css(node: Element, css_in: dict[str, str]) -> None:
     # Replace 'style' with new CSS
     pairs = []
