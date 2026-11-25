@@ -198,6 +198,7 @@ class Selection:
 
         with self.card.inkscape() as inkscape:
             # make a selection of all the id'd objects
+            inkscape.clear()
             inkscape.action(Act.ADD, *ids)
             # perform the transform actions, so we don't need to do it manually
             if action == Act.ROTATE:
@@ -216,25 +217,24 @@ class Selection:
 
     @inkscape_lock
     def add_icons(self, icon_id: str) -> "Selection":
-        icon = self.card.root.find_ids([icon_id])
-        assert len(icon.nodes) == 1, (
-            f"There should be exactly 1 element with an id "
-            f"{icon_id=}, but found {len(icon.nodes)}"
-        )
+        icon = self.card.root.find_ids(icon_id)
         icon_el = icon.nodes[0]
-        self.card.make_definition(icon_el)
+        icon_id = get_id(icon_el)
 
-        anchor_pairs: list[tuple[str, str, float]] = []
+        # anchor_pairs: list[tuple[str, str, float]] = []
+        rotations: dict[str, float] = {}
         for node in self.nodes:
-            origin_id = get_id(node)
+            dest_id = get_id(node)
             rotation = get_rotation(node)
-            id, use_node = self.card.create_clone(origin_id)
-            self.card.anchors[id] = origin_id
-            anchor_pairs.append((id, origin_id, rotation))
+            # id, use_node = self.card.create_clone(origin_id)
+            # self.card.anchors[id] = origin_id
+            # anchor_pairs.append((id, origin_id, rotation))
+            rotations[dest_id] = rotation
 
         with self.card.inkscape() as ink:
-            for id, origin, rot in anchor_pairs:
-                ink.align(id, origin)
+            for dest, rot in rotations.items():
+                id = ink.clone(icon_id)
+                ink.align(id, dest)
                 ink.rotate(id, rot)
 
         return self

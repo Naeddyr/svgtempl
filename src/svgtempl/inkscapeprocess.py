@@ -43,7 +43,7 @@ class InkscapeProcess:
     def __del__(self) -> None:
         # self.action() will BLOCK on return if it tries to wait for messages,
         # so it will always return an empty list when quitting
-        self.action(Act.QUIT)
+        self.action(Act.QUIT, no_lock_check=True)
 
     def _get_empty_prompt(self) -> None:
         # Get rid of the stdout buffer after starting the interactive session,
@@ -168,7 +168,7 @@ class InkscapeProcess:
         return out_lines
 
     def query(self) -> dict[str, dict[str, float]]:
-        queries = self.action(Act.QUERY_ALL)
+        queries = self.action(Act.QUERY_ALL, no_lock_check=True)
 
         # unit conversion code WIP
         conv = CONVERSIONS[self.units]
@@ -215,6 +215,7 @@ class InkscapeProcess:
         res = self.action(
             Act.OPEN,
             str(f),
+            no_lock_check=True
         )
 
         if len(res) > 0:
