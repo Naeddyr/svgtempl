@@ -1,4 +1,4 @@
-# SVGtempl
+# (WIP) SVGtempl
 ## Python commandline SVG templater for card games and other SVG graphics
 
 This is a dumb, simple little templating application meant to be used for the creation
