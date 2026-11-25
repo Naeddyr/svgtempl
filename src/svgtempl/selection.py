@@ -80,11 +80,17 @@ class Selection:
     # Selection object, with a set of XML nodes to be affected by
     # the next method call.
 
-    def find_ids(self, ids: list[str] | tuple[str, ...]) -> "Selection":
+    def find_ids(self, ids: list[str] | tuple[str, ...] | str) -> "Selection":
+        if isinstance(ids, str):
+            ids = [ids]
         new_set = []
         for node in self.nodes:
             for sn in node.getElementsByTagName("*"):
-                if sn.getAttribute("id") in ids:
+                if (snid := sn.getAttribute("id")) in ids:
+                    assert snid not in new_set, (
+                        f"There should be exactly 1 element with an id "
+                        f"{snid=}, but found more"
+                    )
                     new_set.append(sn)
         return type(self)(new_set)
 
