@@ -1,12 +1,14 @@
 import subprocess
 
+from contextlib import contextmanager
 from svgtempl.actions import Act
 from svgtempl.units import CONVERSIONS, Unit
 from pathlib import Path
-from typing import IO, TYPE_CHECKING
+from typing import IO, TYPE_CHECKING, Generator
 
 if TYPE_CHECKING:
     from svgtempl.card import Card
+
 
 STARTUP_CHECK = [
     (
@@ -212,11 +214,7 @@ class InkscapeProcess:
             f"by mistake?"
         )
 
-        res = self.action(
-            Act.OPEN,
-            str(f),
-            no_lock_check=True
-        )
+        res = self.action(Act.OPEN, str(f), no_lock_check=True)
 
         if len(res) > 0:
             print("\n".join(res))
@@ -232,3 +230,22 @@ class InkscapeProcess:
             Act.EXPORT_DO,
         )
         return
+
+    @contextmanager
+    def select(
+        self, ids: str | list[str] | tuple[str, ...]
+    ) -> Generator[list[str], None, None]:
+        if isinstance(ids, str):
+            ids = (ids,)
+        self.clear()
+        self.action(Act.SELECT_BY_ID, *ids)
+        yield self.current_selection()
+        self.clear()
+
+    def clone(self, id: str) -> str:
+        assert isinstance(id, str), "Clone one thing at a time."
+        with self.select(id):
+            self.action(Act.CLONE)
+            clone_id = self.current_selection()[0]
+
+        return clone_id

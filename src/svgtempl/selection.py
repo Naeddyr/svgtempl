@@ -198,20 +198,19 @@ class Selection:
 
         with self.card.inkscape() as inkscape:
             # make a selection of all the id'd objects
-            inkscape.clear()
-            inkscape.action(Act.ADD, *ids)
-            # perform the transform actions, so we don't need to do it manually
-            if action == Act.ROTATE:
-                assert isinstance(args, float)
-                inkscape.action(action, str(args))
-            elif action == Act.SCALE:
-                assert isinstance(args, float)
-                inkscape.action(action, str(args))
-            elif action == Act.TRANSLATE:
-                assert isinstance(args, tuple)
-                assert len(args) == 2
-                inkscape.action(action, str(args[0]), str(args[1]))
-            inkscape.clear()
+            with inkscape.select(ids):
+                # perform the transform actions,
+                # so we don't need to do it manually
+                if action == Act.ROTATE:
+                    assert isinstance(args, float)
+                    inkscape.action(action, str(args))
+                elif action == Act.SCALE:
+                    assert isinstance(args, float)
+                    inkscape.action(action, str(args))
+                elif action == Act.TRANSLATE:
+                    assert isinstance(args, tuple)
+                    assert len(args) == 2
+                    inkscape.action(action, str(args[0]), str(args[1]))
 
         return self.card.root.find_ids(ids)
 
