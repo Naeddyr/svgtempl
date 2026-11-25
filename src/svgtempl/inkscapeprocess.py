@@ -3,7 +3,10 @@ import subprocess
 from svgtempl.actions import Act
 from svgtempl.units import CONVERSIONS, Unit
 from pathlib import Path
-from typing import IO
+from typing import IO, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from svgtempl.card import Card
 
 STARTUP_CHECK = [
     (
@@ -17,14 +20,16 @@ STARTUP_CHECK = [
 
 
 class InkscapeProcess:
-    def __init__(self, svgfile: Path) -> None:
+    def __init__(self, svgfile: Path, card: "Card" | None = None) -> None:
         self.proc = subprocess.Popen(
             ["inkscape", "--shell"],
             text=True,
             stdout=subprocess.PIPE,
             stdin=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
         self.file = svgfile
+        self.card = card
         self.stdout: IO[str] = self.proc.stdout  # type: ignore[assignment]
         assert self.stdout is not None
         self.stdin: IO[str] = self.proc.stdin  # type: ignore[assignment]
@@ -76,6 +81,7 @@ class InkscapeProcess:
     def action(
         self,
         *actions: Act | str,
+        no_lock_check=False,
     ) -> list[str]:
         # 1. Send action to stdout, flush.
         # 2. Immediately send newline + flush to force a blank prompt that we
@@ -90,6 +96,17 @@ class InkscapeProcess:
         # empty prompts for some reason, loop over them only when you are 100%
         # sure there's going to be some kind of content in the future (from
         # writing input into stdin as a an action)
+
+        if (
+            self.card is not None
+            and self.card._lock is False
+            and no_lock_check is False
+        ):
+            raise Exception(
+                "Did you mean to run this action outside of an "
+                "Inkscape context? "
+                "Use Inkscape.action(..., unlock=True) if so."
+            )
 
         out_lines: list[str] = []
 
@@ -195,10 +212,15 @@ class InkscapeProcess:
             f"by mistake?"
         )
 
-        self.action(
+        res = self.action(
             Act.OPEN,
             str(f),
         )
+
+        if len(res) > 0:
+            print("\n".join(res))
+            raise Exception("File failed to parse.")
+
         return
 
     def export_page(self, f: Path | str) -> None:
