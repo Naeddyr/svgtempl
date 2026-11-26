@@ -2,7 +2,6 @@ import re
 
 from copy import copy
 from svgtempl.actions import Act
-
 from svgtempl.svg import get_rotation
 from svgtempl.xml import get_id, get_styles, add_tspans
 from svgtempl.text import parse_markup, Style
@@ -67,6 +66,9 @@ class Selection:
         # function class chain
         self.store[key] = self.id_list()
         return self
+
+    def retrieve(self, key: str) -> "Selection":
+        return self.card.root.find_ids(self.store[key])
 
     @inkscape_lock
     def update(self) -> "Selection":
@@ -225,7 +227,6 @@ class Selection:
         for node in self.nodes:
             dest_id = get_id(node)
             rotation = get_rotation(node)
-            # id, use_node = self.card.create_clone(origin_id)
             # self.card.anchors[id] = origin_id
             # anchor_pairs.append((id, origin_id, rotation))
             rotations[dest_id] = rotation
