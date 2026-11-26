@@ -238,3 +238,19 @@ class Selection:
                 ink.rotate(id, rot)
 
         return self
+
+    @inkscape_lock
+    def add_class(self, cls: str) -> "Selection":
+        for node in self.nodes:
+            classes = set((node.getAttribute("class") or "").split())
+            classes.add(cls)
+            node.setAttribute("class", " ".join(sorted(classes)))
+        return self
+
+    @inkscape_lock
+    def remove_class(self, cls: str) -> "Selection":
+        for node in self.nodes:
+            classes = set((node.getAttribute("class") or "").split())
+            classes.remove(cls)
+            node.setAttribute("class", " ".join(sorted(classes)))
+        return self
