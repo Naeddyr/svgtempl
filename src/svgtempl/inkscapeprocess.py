@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from svgtempl.actions import Act
 from svgtempl.units import CONVERSIONS, Unit
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Generator
+from typing import IO, TYPE_CHECKING, Generator, Union
 
 if TYPE_CHECKING:
     from svgtempl.card import Card
@@ -22,7 +22,9 @@ STARTUP_CHECK = [
 
 
 class InkscapeProcess:
-    def __init__(self, svgfile: Path, card: "Card" | None = None) -> None:
+    def __init__(
+        self, svgfile: Path, card: Union["Card", None] = None
+    ) -> None:
         self.proc = subprocess.Popen(
             ["inkscape", "--shell"],
             text=True,
