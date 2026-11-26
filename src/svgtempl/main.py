@@ -24,13 +24,51 @@ def main() -> int:
     # svgtempl run
     run_parser = subparsers.add_parser("run")
     run_parser.add_argument(
-        "--templates", "-t", "--template", type=Path, nargs="+"
+        "--templates",
+        "-t",
+        "--template",
+        type=Path,
+        nargs="+",
+        help="""The SVG template file(s) to be filled in and modified. If
+        you provide several files, you must have a `template` field in your
+        data so that the program can choose the correct one. The name of the
+        template should be the file-name of the template""",
     )
-    run_parser.add_argument("--outdir", "-o", type=Path)
-    run_parser.add_argument("--data", "-d", type=Path)
-    run_parser.add_argument("--page-template", "-p", type=Path)
-    run_parser.add_argument("--script", "-s", type=Path)
-    run_parser.add_argument("--export-cards", "-c", action="store_true")
+    run_parser.add_argument(
+        "--outdir",
+        "-o",
+        type=Path,
+        help="""
+                Output directory for PDFs or images.""",
+    )
+
+    run_parser.add_argument(
+        "--data",
+        "-d",
+        type=Path,
+        help="""Spreadsheet file containing the data needed to fill
+                in the template.""",
+    )
+    run_parser.add_argument(
+        "--page-template",
+        "-p",
+        type=Path,
+        help="""Print page template for collated cards / images.""",
+    )
+    run_parser.add_argument(
+        "--script",
+        "-s",
+        type=Path,
+        help="""Python script that contains the code to build the image.""",
+    )
+    run_parser.add_argument(
+        "--export-cards",
+        "-c",
+        action="store_true",
+        help="""If `export-cards` is set, instead of printing a page with
+        several cards on it as a PDF, output individual images of each
+        card.""",
+    )
     run_parser.set_defaults(func=run)
 
     # svgtempl init
@@ -101,7 +139,7 @@ def run(args) -> int:
         script = Path("script.py")
     if not (script.is_file() and script.suffix == ".py"):
         print(
-            "Please provide a generation script (generate boilerplate with "
+            "Please provide a script (generate boilerplate with "
             "the command `svgtempl init` in a project folder)"
         )
         return 1
