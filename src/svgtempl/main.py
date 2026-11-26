@@ -23,7 +23,9 @@ def main() -> int:
 
     # svgtempl run
     run_parser = subparsers.add_parser("run")
-    run_parser.add_argument("--template", "-t", type=Path)
+    run_parser.add_argument(
+        "--templates", "-t", "--template", type=Path, nargs="+"
+    )
     run_parser.add_argument("--outdir", "-o", type=Path)
     run_parser.add_argument("--data", "-d", type=Path)
     run_parser.add_argument("--page-template", "-p", type=Path)
@@ -49,14 +51,16 @@ def main() -> int:
 def run(args) -> int:
     print(args)
     print("RUN")
-    template = args.template
-    if template is None:
-        template = Path("template.svg")
-    if not (template.is_file() and template.suffix == ".svg"):
-        print("Please provide an SVG file as your card template")
-        return 1
-    with open(template) as f:
-        card_template = f.read()
+    templates = args.templates
+    if templates is None or len(templates) == 0:
+        templates = [Path("template.svg")]
+    card_templates: dict[str, str] = {}
+    for template in templates:
+        if not (template.is_file() and template.suffix == ".svg"):
+            print("Please provide an SVG file as your card template")
+            return 1
+        with open(template) as f:
+            card_templates[template.name] = f.read()
     # WIP: enable the use of several different templates that can be switched
     # between as needed.
 
@@ -67,7 +71,6 @@ def run(args) -> int:
             if try_path.is_file():
                 data = try_path
                 break
-    print(data)
     if not (data.is_file() and data.suffix in (".ods",)):
         print("Data should be an .ods spreadsheet file")
         return 1
@@ -113,7 +116,7 @@ def run(args) -> int:
         print(card_cache)
         cards = []
         for i, row in enumerate(spreadsheet_data.rows):
-            card = Card(row, card_template, inkproc, user_script.user_script)
+            card = Card(row, card_templates, inkproc, user_script.user_script)
             card.generate()
             cards.append(card)
 

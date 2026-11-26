@@ -25,7 +25,7 @@ class Card:
     def __init__(
         self,
         row_data: dict[str, DataCell],
-        card_template: str,
+        card_templates: dict[str, str],
         inkproc: InkscapeProcess,
         user_script: Callable[["Card"], None],
         selection_type: type["Selection"] = Selection,
@@ -37,7 +37,18 @@ class Card:
         # for some reason it seemed like the deepcopied DOM had some sort sort
         # of infinite cycle. We'll address this by just getting new copies
         # by reparsing.
-        self.doc = parseString(card_template)
+        if len(card_templates) == 1:
+            for k, v in card_templates.items():
+                self.doc = parseString(v)
+                break
+        else:
+            assert "template" in row_data, (
+                "Add a `template` column to your data "
+                "so that the correct SVG file can be chosen as the card's "
+                "template."
+            )
+            self.doc = parseString(row_data["template"].data)
+
         self._proc = inkproc
         self.user_script = user_script
         # Pass the Selection class to Card, or if you want to subclass
