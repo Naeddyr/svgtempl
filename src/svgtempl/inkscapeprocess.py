@@ -249,3 +249,15 @@ class InkscapeProcess:
             clone_id = self.current_selection()[0]
 
         return clone_id
+
+    def align(self, id: str, dest: str) -> None:
+        assert isinstance(id, str), "Align one thing at a time."
+        assert isinstance(
+            dest, str
+        ), "You can have only one destination when aligning."
+        with self.select((id, dest)):
+            self.action(Act.OBJECT_ALIGN, "hcenter", "vcenter", "last")
+
+    def rotate(self, ids: str | list[str] | tuple[str], rot: float) -> None:
+        with self.select(ids):
+            self.action(Act.ROTATE, str(rot))
