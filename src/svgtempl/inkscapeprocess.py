@@ -240,7 +240,8 @@ class InkscapeProcess:
         if isinstance(ids, str):
             ids = (ids,)
         self.clear()
-        self.action(Act.SELECT_BY_ID, *ids)
+        for id in ids:
+            self.action(Act.SELECT_BY_ID, id)
         yield self.current_selection()
         self.clear()
 
