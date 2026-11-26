@@ -194,6 +194,7 @@ class Card:
         # by `yielding` again... at least I think that's how it works.
 
         if read_only is not True:
+            self._proc.export_page(self.inkfile.name)
             self.parse_inkfile()
             self._lock = False
 
